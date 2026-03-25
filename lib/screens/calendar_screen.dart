@@ -1,0 +1,847 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:table_calendar/table_calendar.dart';
+
+import '../models/diary_entry.dart';
+import '../providers/diary_provider.dart';
+import '../providers/trip_provider.dart';
+
+/// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화만으로 처리하고
+/// 아래 mock 맵은 제거하세요.
+
+const Map<int, _DayMeta> _mockDayMeta = {
+  12: _DayMeta(hasDiary: true, hasPhoto: false, questClear: false),
+  36: _DayMeta(hasDiary: true, hasPhoto: true, questClear: false),
+  85: _DayMeta(hasDiary: true, hasPhoto: true, questClear: true),
+  166: _DayMeta(hasDiary: false, hasPhoto: true, questClear: true),
+  238: _DayMeta(hasDiary: true, hasPhoto: false, questClear: true),
+};
+
+class _DayMeta {
+  const _DayMeta({
+    required this.hasDiary,
+    required this.hasPhoto,
+    required this.questClear,
+  });
+
+  final bool hasDiary;
+  final bool hasPhoto;
+  final bool questClear;
+
+  static const empty = _DayMeta(
+    hasDiary: false,
+    hasPhoto: false,
+    questClear: false,
+  );
+}
+
+class CalendarScreen extends ConsumerStatefulWidget {
+  const CalendarScreen({super.key});
+
+  @override
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  static const _panelBg = Color(0xFF0E1420);
+  static const _selectedDayBg = Color(0xFF1E2A40);
+
+  static final List<_CalStarSample> _starSamples = _buildStarSamples();
+
+  static List<_CalStarSample> _buildStarSamples() {
+    final rng = math.Random(42);
+    const sizes = <double>[0.5, 1.0, 1.5];
+    return List.generate(300, (_) {
+      return _CalStarSample(
+        nx: rng.nextDouble(),
+        ny: rng.nextDouble(),
+        radius: sizes[rng.nextInt(3)],
+        colorIndex: rng.nextInt(3),
+      );
+    });
+  }
+
+  static final _tripStart = DateTime(2025, 1, 1);
+  static const _monthAbbr = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
+  static const _weekdayEn = [
+    'MON',
+    'TUE',
+    'WED',
+    'THU',
+    'FRI',
+    'SAT',
+    'SUN',
+  ];
+
+  /// TableCalendar 범위 (고정)
+  static final _firstDay = DateTime(2025, 1, 1);
+  static final _lastDay = DateTime(2025, 12, 31);
+
+  late DateTime _focusedDay;
+  DateTime? _selectedDay;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedDay = _firstDay;
+  }
+
+  /// [firstDay, lastDay] 밖의 날짜를 clamp (assertion: focusedDay ≤ lastDay)
+  DateTime _clampToTripCalendar(DateTime d) {
+    if (d.isBefore(_firstDay)) return _firstDay;
+    if (d.isAfter(_lastDay)) return _lastDay;
+    return d;
+  }
+
+  /// 오늘이 lastDay 이후면 lastDay, 이전이면 오늘 (2025 이전이면 firstDay)
+  DateTime _safeFocusedDayFromToday() {
+    final today = DateTime.now();
+    if (today.isAfter(_lastDay)) return _lastDay;
+    if (today.isBefore(_firstDay)) return _firstDay;
+    return today;
+  }
+
+  int _tripDayFromDate(DateTime d) {
+    return d.difference(_tripStart).inDays + 1;
+  }
+
+  _DayMeta _effectiveMeta(int tripDay, Map<int, DiaryEntry> diaryMap) {
+    final e = diaryMap[tripDay];
+    if (e != null) {
+      final questsOk =
+          e.questDone.length >= 3 && e.questDone.every((bool x) => x);
+      return _DayMeta(
+        hasDiary: e.text.trim().isNotEmpty,
+        hasPhoto: e.photoPaths.isNotEmpty,
+        questClear: questsOk,
+      );
+    }
+    return _mockDayMeta[tripDay] ?? _DayMeta.empty;
+  }
+
+  String _formatHudDate(DateTime d) {
+    final m = _monthAbbr[d.month - 1];
+    return '${d.year} · $m · ${d.day.toString().padLeft(2, '0')}';
+  }
+
+  String _weekdayShort(DateTime d) {
+    return _weekdayEn[(d.weekday - 1) % 7];
+  }
+
+  void _jumpToPlanetMonth(PlanetInfo planet) {
+    final targetDay = DateTime(2025, 1, 1).add(
+      Duration(days: planet.startDay - 1),
+    );
+    setState(() {
+      final safe = _clampToTripCalendar(targetDay);
+      _focusedDay = safe;
+      _selectedDay = safe;
+    });
+  }
+
+  /// TODO(Hive): diaryProvider만으로 통계 계산 (현재는 mock 보조 포함)
+  ({int recorded, int questsCleared}) _stats(
+    Map<int, DiaryEntry> diaryMap,
+  ) {
+    var recorded = 0;
+    var questsCleared = 0;
+    for (var tripDay = 1; tripDay <= 365; tripDay++) {
+      final m = _effectiveMeta(tripDay, diaryMap);
+      if (m.hasDiary) recorded++;
+      if (m.questClear) questsCleared++;
+    }
+    return (recorded: recorded, questsCleared: questsCleared);
+  }
+
+  String? _previewText(int tripDay, Map<int, DiaryEntry> diaryMap) {
+    final e = diaryMap[tripDay];
+    if (e != null && e.text.trim().isNotEmpty) {
+      final line = e.text.trim().split(RegExp(r'\s+')).take(12).join(' ');
+      return line.length > 80 ? '${line.substring(0, 80)}…' : line;
+    }
+    if (_mockDayMeta[tripDay]?.hasDiary == true) {
+      return '오늘은 모의 데이터로 표시되는 미리보기 텍스트입니다.';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trip = ref.watch(tripProvider);
+    final diaryMap = ref.watch(diaryProvider);
+
+    if (!_initialized) {
+      _initialized = true;
+      final safe = _safeFocusedDayFromToday();
+      _focusedDay = safe;
+      _selectedDay = safe;
+    }
+
+    final stats = _stats(diaryMap);
+    final headerTextStyle = GoogleFonts.spaceMono(
+      color: Colors.white.withValues(alpha: 0.5),
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+    );
+    final dowStyle = GoogleFonts.spaceMono(
+      color: Colors.white.withValues(alpha: 0.25),
+      fontSize: 9,
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF020408),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _CalendarStarfieldPainter(_starSamples),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHud(trip),
+                  const SizedBox(height: 20),
+                  _buildPlanetStrip(trip),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _panelBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+                    child: _buildCalendar(
+                      trip: trip,
+                      diaryMap: diaryMap,
+                      headerTextStyle: headerTextStyle,
+                      dowStyle: dowStyle,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSelectionPreview(trip, diaryMap),
+                  const SizedBox(height: 20),
+                  _buildStatsRow(trip, stats),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHud(TripState trip) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'TODAY',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  color: const Color(0xFFFFD246).withValues(alpha: 0.5),
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatHudDate(trip.today),
+                style: GoogleFonts.spaceMono(
+                  fontSize: 24,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w500,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _weekdayShort(trip.today),
+                style: GoogleFonts.spaceMono(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.3),
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'MISSION LOG',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  color: const Color(0xFFFFD246).withValues(alpha: 0.5),
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'DAY ${trip.tripDay.toString().padLeft(3, '0')} / 365',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 20,
+                  color: Colors.white.withValues(alpha: 0.88),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${trip.planet.name.toUpperCase()} SECTOR',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 12,
+                  color: const Color(0xFFC8A97A),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '체류 ${trip.stayDay}일차 · ${trip.remainDays}일 남음',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanetStrip(TripState trip) {
+    return SizedBox(
+      height: 88,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: kPlanets.map((p) {
+            final current = p.name == trip.planet.name;
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _jumpToPlanetMonth(p),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: 108,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: current
+                          ? Colors.white.withValues(alpha: 0.09)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: current
+                            ? Colors.white.withValues(alpha: 0.14)
+                            : Colors.white.withValues(alpha: 0.06),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: p.color,
+                            boxShadow: [
+                              BoxShadow(
+                                color: p.color.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          p.name,
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${p.days}일 체류',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 9,
+                            color: Colors.white.withValues(alpha: 0.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendar({
+    required TripState trip,
+    required Map<int, DiaryEntry> diaryMap,
+    required TextStyle headerTextStyle,
+    required TextStyle dowStyle,
+  }) {
+    return SizedBox(
+      height: 400,
+      child: TableCalendar<void>(
+        firstDay: _firstDay,
+        lastDay: _lastDay,
+        focusedDay: _clampToTripCalendar(_focusedDay),
+        rowHeight: 52,
+        calendarFormat: CalendarFormat.month,
+        availableCalendarFormats: const {CalendarFormat.month: 'Month'},
+        startingDayOfWeek: StartingDayOfWeek.sunday,
+        daysOfWeekVisible: true,
+        selectedDayPredicate: (d) =>
+            _selectedDay != null && isSameDay(_selectedDay, d),
+        onDaySelected: (selected, focused) {
+          setState(() {
+            _selectedDay = selected;
+            _focusedDay = _clampToTripCalendar(focused);
+          });
+        },
+        onPageChanged: (focused) {
+          setState(() => _focusedDay = _clampToTripCalendar(focused));
+        },
+        headerStyle: HeaderStyle(
+          titleCentered: true,
+          formatButtonVisible: false,
+          titleTextFormatter: (d, _) {
+            final m = _monthAbbr[d.month - 1];
+            return '$m ${d.year}';
+          },
+          titleTextStyle: headerTextStyle,
+          leftChevronIcon: Icon(
+            Icons.chevron_left,
+            color: Colors.white.withValues(alpha: 0.45),
+            size: 26,
+          ),
+          rightChevronIcon: Icon(
+            Icons.chevron_right,
+            color: Colors.white.withValues(alpha: 0.45),
+            size: 26,
+          ),
+        ),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekdayStyle: dowStyle,
+          weekendStyle: dowStyle,
+        ),
+        calendarStyle: const CalendarStyle(
+          outsideDaysVisible: true,
+          markersMaxCount: 0,
+          cellMargin: EdgeInsets.zero,
+          defaultDecoration: BoxDecoration(),
+          weekendDecoration: BoxDecoration(),
+          holidayDecoration: BoxDecoration(),
+          selectedDecoration: BoxDecoration(),
+          todayDecoration: BoxDecoration(),
+          outsideDecoration: BoxDecoration(),
+        ),
+        calendarBuilders: CalendarBuilders<void>(
+          defaultBuilder: (context, day, focusedDay) {
+            final outside =
+                day.month != focusedDay.month || day.year != focusedDay.year;
+            final today = isSameDay(day, DateTime.now());
+            final selected =
+                _selectedDay != null && isSameDay(_selectedDay, day);
+            return _dayCell(
+              day,
+              focusedDay,
+              diaryMap,
+              isToday: today,
+              isSelected: selected,
+              isOutside: outside,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _dayCell(
+    DateTime day,
+    DateTime focusedDay,
+    Map<int, DiaryEntry> diaryMap, {
+    bool isToday = false,
+    bool isSelected = false,
+    bool isOutside = false,
+  }) {
+    final tripDay = _tripDayFromDate(day);
+    if (tripDay < 1 || tripDay > 365) {
+      return const SizedBox.shrink();
+    }
+    final planet = planetForDay(tripDay);
+    final meta = _effectiveMeta(tripDay, diaryMap);
+
+    Widget inner = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: isToday
+                  ? Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${day.day}',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 13,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      '${day.day}',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _dot(
+                Colors.white,
+                meta.hasDiary,
+              ),
+              const SizedBox(width: 3),
+              _dot(
+                const Color(0xFF6BA8FF),
+                meta.hasPhoto,
+              ),
+              const SizedBox(width: 3),
+              _dot(
+                const Color(0xFFFFD246),
+                meta.questClear,
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Container(
+            height: 1.5,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: planet.color.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    inner = Container(
+      decoration: BoxDecoration(
+        color: isToday
+            ? null
+            : (isSelected ? _selectedDayBg : null),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: inner,
+    );
+
+    if (isOutside) {
+      inner = Opacity(opacity: 0.1, child: inner);
+    }
+
+    return inner;
+  }
+
+  Widget _dot(Color color, bool on) {
+    return Container(
+      width: 4,
+      height: 4,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: on ? color : color.withValues(alpha: 0.12),
+      ),
+    );
+  }
+
+  Widget _buildSelectionPreview(
+    TripState trip,
+    Map<int, DiaryEntry> diaryMap,
+  ) {
+    final sel = _selectedDay;
+    final open = sel != null;
+    final tripDay =
+        sel == null ? trip.tripDay : _tripDayFromDate(sel);
+    final planet = planetForDay(tripDay);
+    final meta = _effectiveMeta(tripDay, diaryMap);
+    final preview = _previewText(tripDay, diaryMap);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      height: open ? 200 : 0,
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: open
+          ? Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push('/diary/$tripDay'),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _panelBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: planet.color,
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _formatHudDate(sel),
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 14,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'DAY $tripDay',
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: planet.color,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            planet.name,
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          preview ??
+                              '아직 기록이 없는 날이에요.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 11,
+                            height: 1.35,
+                            color: preview == null
+                                ? Colors.white.withValues(alpha: 0.35)
+                                : Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _badge('일기', meta.hasDiary),
+                          const SizedBox(width: 8),
+                          _badge('사진', meta.hasPhoto),
+                          const SizedBox(width: 8),
+                          _badge('퀘스트', meta.questClear),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _badge(String label, bool done) {
+    const amber = Color(0xFFFFD246);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: done ? amber.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.spaceMono(
+          fontSize: 9,
+          color: done ? amber.withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.25),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(
+    TripState trip,
+    ({int recorded, int questsCleared}) stats,
+  ) {
+    Widget cell(String title, String value) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.035),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.07),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 9,
+                  color: Colors.white.withValues(alpha: 0.35),
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 16,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        cell('기록완료일수', '${stats.recorded}'),
+        const SizedBox(width: 8),
+        cell('퀘스트클리어수', '${stats.questsCleared}'),
+        const SizedBox(width: 8),
+        cell('현재행성 남은일', '${trip.remainDays}'),
+      ],
+    );
+  }
+}
+
+class _CalStarSample {
+  const _CalStarSample({
+    required this.nx,
+    required this.ny,
+    required this.radius,
+    required this.colorIndex,
+  });
+
+  final double nx;
+  final double ny;
+  final double radius;
+  final int colorIndex;
+}
+
+class _CalendarStarfieldPainter extends CustomPainter {
+  _CalendarStarfieldPainter(this.samples);
+
+  final List<_CalStarSample> samples;
+
+  static const _colors = <Color>[
+    Color(0xFFF6F8FF),
+    Color(0xFFFFF3DF),
+    Color(0xFFD8E8FF),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFF020408),
+    );
+    for (final s in samples) {
+      canvas.drawCircle(
+        Offset(s.nx * size.width, s.ny * size.height),
+        s.radius,
+        Paint()..color = _colors[s.colorIndex],
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CalendarStarfieldPainter oldDelegate) => false;
+}
