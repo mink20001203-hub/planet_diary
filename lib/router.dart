@@ -4,6 +4,8 @@ import 'screens/space_map_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/diary_edit_screen.dart';
 
+import 'screens/recap_screen.dart';
+
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
@@ -20,6 +22,14 @@ final appRouter = GoRouter(
       pageBuilder: (context, state) => CustomTransitionPage(
         key: state.pageKey,
         child: const CalendarScreen(),
+        transitionsBuilder: _fadeTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/recap',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const RecapScreen(),
         transitionsBuilder: _fadeTransition,
       ),
     ),

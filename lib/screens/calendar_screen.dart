@@ -9,6 +9,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../models/diary_entry.dart';
 import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
+import '../providers/xp_provider.dart';
 
 /// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화만으로 처리하고
 /// 아래 mock 맵은 제거하세요.
@@ -93,7 +94,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _focusedDay = _firstDay;
+    // 초기화: 오늘 날짜(매핑된 2025년 날짜)로 포커스 및 선택
+    final trip = ref.read(tripProvider);
+    _focusedDay = _clampToTripCalendar(trip.today);
+    _selectedDay = _focusedDay;
+    _initialized = true;
   }
 
   /// [firstDay, lastDay] 밖의 날짜를 clamp (assertion: focusedDay ≤ lastDay)
@@ -105,7 +110,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   /// 오늘이 lastDay 이후면 lastDay, 이전이면 오늘 (2025 이전이면 firstDay)
   DateTime _safeFocusedDayFromToday() {
-    final today = DateTime.now();
+    final today = ref.read(tripProvider).today;
     if (today.isAfter(_lastDay)) return _lastDay;
     if (today.isBefore(_firstDay)) return _firstDay;
     return today;
@@ -227,7 +232,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: SafeArea(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -249,7 +254,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
                         child: _buildCalendar(
-                          trip: trip,
                           diaryMap: diaryMap,
                           headerTextStyle: headerTextStyle,
                           dowStyle: dowStyle,
@@ -278,13 +282,40 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'TODAY',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 10,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.6),
-                  letterSpacing: 2,
-                ),
+              Row(
+                children: [
+                  InkWell(
+                    onTap: () => context.go('/'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        'MAP ↑',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 9,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'TODAY',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 10,
+                      color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -312,13 +343,34 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'MISSION LOG',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 10,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.6),
-                  letterSpacing: 2,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'MISSION LOG',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 10,
+                      color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => context.push('/recap'),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFFD246).withValues(alpha: 0.3)),
+                      ),
+                      child: const Icon(
+                        Icons.analytics_outlined,
+                        size: 14,
+                        color: Color(0xFFFFD246),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -434,7 +486,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _buildCalendar({
-    required TripState trip,
     required Map<int, DiaryEntry> diaryMap,
     required TextStyle headerTextStyle,
     required TextStyle dowStyle,
@@ -807,13 +858,47 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       );
     }
 
-    return Row(
+    final xpState = ref.watch(xpProvider);
+
+    return Column(
       children: [
-        cell('기록완료일수', '${stats.recorded}'),
-        const SizedBox(width: 8),
-        cell('퀘스트클리어수', '${stats.questsCleared}'),
-        const SizedBox(width: 8),
-        cell('현재행성 남은일', '${trip.remainDays}'),
+        Row(
+          children: [
+            cell('기록완료일수', '${stats.recorded}'),
+            const SizedBox(width: 8),
+            cell('퀘스트클리어수', '${stats.questsCleared}'),
+            const SizedBox(width: 8),
+            cell('현재행성 남은일', '${trip.remainDays}'),
+          ],
+        ),
+        if (xpState.streak > 0) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD246).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFFFFD246).withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🔥', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Text(
+                  '${xpState.streak}일 연속 기록 중',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 12,
+                    color: const Color(0xFFFFD246),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

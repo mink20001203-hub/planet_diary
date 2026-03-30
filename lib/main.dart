@@ -19,6 +19,9 @@ void main() async {
     debugPrint('Opening Diary Box...');
     await Hive.openBox<DiaryEntry>('diary');
     
+    debugPrint('Opening XP Box...');
+    await Hive.openBox('xp');
+    
     debugPrint('--- HIVE READY, STARTING UI ---');
     runApp(const ProviderScope(child: PlanetDiaryApp()));
   } catch (e) {

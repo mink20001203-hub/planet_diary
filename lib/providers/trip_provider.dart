@@ -65,7 +65,8 @@ const List<PlanetInfo> kPlanets = [
 ];
 
 class TripState {
-  final DateTime today;
+  final DateTime today; // 2025년 기준 매핑된 날짜
+  final DateTime realToday; // 실제 현재 날짜
   final int tripDay;
   final PlanetInfo planet;
   final int stayDay;
@@ -73,6 +74,7 @@ class TripState {
 
   const TripState({
     required this.today,
+    required this.realToday,
     required this.tripDay,
     required this.planet,
     required this.stayDay,
@@ -89,12 +91,19 @@ PlanetInfo planetForDay(int day) {
 
 final tripProvider = Provider<TripState>((ref) {
   final start = DateTime(2025, 1, 1);
-  final today = DateTime.now();
-  final raw = today.difference(start).inDays + 1;
-  final tripDay = raw.clamp(1, 365);
+  final realToday = DateTime.now();
+  
+  // 365일 초과 시 순환 (1~365)
+  final diff = realToday.difference(start).inDays;
+  final tripDay = (diff % 365) + 1;
+  
+  // 2025년 달력에 표시할 매핑 날짜
+  final journeyDate = start.add(Duration(days: tripDay - 1));
+  
   final planet = planetForDay(tripDay);
   return TripState(
-    today: today,
+    today: journeyDate,
+    realToday: realToday,
     tripDay: tripDay,
     planet: planet,
     stayDay: tripDay - planet.startDay + 1,

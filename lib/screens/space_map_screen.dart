@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/trip_provider.dart';
+import '../providers/xp_provider.dart';
 
 class SpaceMapScreen extends ConsumerStatefulWidget {
   const SpaceMapScreen({super.key});
@@ -403,6 +404,12 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     final topPad = shortSide * 0.06;
     final bottomPad = shortSide * 0.05;
     final sunBelowTop = cy + _sunRadius + shortSide * 0.04;
+    final xpState = ref.watch(xpProvider);
+    const nextLevelXp = 100;
+    final currentXp = xpState.totalXp % 100;
+
+    final progress = (currentXp / nextLevelXp).clamp(0.0, 1.0);
+
     return Stack(
       children: [
         Positioned(
@@ -450,6 +457,49 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
                   color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // XP Bar (Bottom-Left)
+        Positioned(
+          left: pad,
+          bottom: bottomPad,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'LV.${xpState.level}',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 120,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: progress,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: trip.planet.color,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: trip.planet.color.withValues(alpha: 0.4),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import '../models/diary_entry.dart';
 import '../providers/diary_provider.dart';
 import '../providers/quest_provider.dart';
 import '../providers/trip_provider.dart';
+import '../providers/xp_provider.dart';
 
 /// tripDay 기준 일기 편집 (Hive는 diaryProvider.save로 연결)
 class DiaryEditScreen extends ConsumerStatefulWidget {
@@ -22,9 +24,17 @@ class DiaryEditScreen extends ConsumerStatefulWidget {
   ConsumerState<DiaryEditScreen> createState() => _DiaryEditScreenState();
 }
 
-class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
+class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
+    with TickerProviderStateMixin {
   static const _panelBg = Color(0xFF0E1420);
   static const _moodCardBg = Color(0xFF0A1018);
+
+  // XP 애니메이션
+  late final AnimationController _xpAnimController;
+  late final Animation<double> _xpOpacity;
+  late final Animation<Offset> _xpOffset;
+  int _earnedXp = 0;
+  bool _showLevelUp = false;
 
   static final List<_DiaryStarSample> _starSamples = _buildStarSamples();
 
@@ -61,6 +71,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   late final TextEditingController _textController;
   int _moodIndex = 0;
   final List<String> _photoPaths = [];
+  final Map<String, Uint8List> _photoBytesCache = {};
   final ImagePicker _picker = ImagePicker();
   bool _hydrated = false;
 
@@ -78,6 +89,20 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
     super.initState();
     _textController = TextEditingController();
     _textController.addListener(() => setState(() {}));
+
+    _xpAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _xpOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_xpAnimController);
+    _xpOffset = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: const Offset(0, -0.5),
+    ).animate(CurvedAnimation(parent: _xpAnimController, curve: Curves.easeOut));
     
     // initState에서 데이터 초기화
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,6 +113,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   @override
   void dispose() {
     _textController.dispose();
+    _xpAnimController.dispose();
     super.dispose();
   }
 
@@ -125,16 +151,34 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
     
     final messenger = ScaffoldMessenger.of(context);
     await ref.read(diaryProvider.notifier).save(entry);
+
+    // XP 정산
+    int totalEarned = 0;
+    totalEarned += 10; // 일기 작성
+    if (_photoPaths.isNotEmpty) totalEarned += 5; // 사진
+    final doneCount = quests.where((q) => q).length;
+    totalEarned += (doneCount * 15); // 퀘스트
+
+    final leveledUp = ref.read(xpProvider.notifier).addXp(totalEarned);
+    ref.read(xpProvider.notifier).checkStreak(widget.tripDay);
+
+    setState(() {
+      _earnedXp = totalEarned;
+      _showLevelUp = leveledUp;
+    });
+    _xpAnimController.forward(from: 0);
     
     if (!mounted) return;
     if (popAfter) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted) return;
       context.pop();
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF1a1a1a),
           behavior: SnackBarBehavior.floating,
           content: Text(
-            'DAY ${widget.tripDay} 기록 완료',
+            'DAY ${widget.tripDay} 기록 완료 (+$totalEarned XP)',
             style: GoogleFonts.spaceMono(
               color: const Color(0xFFFFD246),
               fontSize: 13,
@@ -172,7 +216,20 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   }
 
   void _removePhoto(int index) {
-    setState(() => _photoPaths.removeAt(index));
+    setState(() {
+      final removedPath = _photoPaths.removeAt(index);
+      _photoBytesCache.remove(removedPath);
+    });
+  }
+
+  Future<Uint8List> _readPhotoBytes(String path) async {
+    final cached = _photoBytesCache[path];
+    if (cached != null) {
+      return cached;
+    }
+    final bytes = await XFile(path).readAsBytes();
+    _photoBytesCache[path] = bytes;
+    return bytes;
   }
 
   @override
@@ -220,10 +277,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
           ),
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: SafeArea(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -255,7 +312,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                                 color: Colors.white.withValues(alpha: 0.3),
                                 height: 1.75,
                               ),
-                              contentPadding: const EdgeInsets.all(14),
+                              contentPadding: EdgeInsets.all(14),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(color: borderIdle),
@@ -300,9 +357,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                           children: [
                             ...List.generate(_photoPaths.length, (i) {
                               return Padding(
-                                padding: const EdgeInsets.only(right: 10),
+                                padding: EdgeInsets.only(right: 10),
                                 child: _PhotoThumb(
                                   path: _photoPaths[i],
+                                  loadBytes: _readPhotoBytes,
                                   onRemove: () => _removePhoto(i),
                                 ),
                               );
@@ -334,7 +392,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                             child: OutlinedButton(
                               onPressed: () => _saveToHive(popAfter: false),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: EdgeInsets.symmetric(vertical: 14),
                                 side: BorderSide(
                                   color: Colors.white.withValues(alpha: 0.2),
                                 ),
@@ -357,7 +415,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                             child: OutlinedButton(
                               onPressed: () => _saveToHive(popAfter: true),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: EdgeInsets.symmetric(vertical: 14),
                                 side: BorderSide(
                                   color: const Color(0xFFFFD246).withValues(alpha: 0.5),
                                 ),
@@ -382,6 +440,54 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                   ),
                 ),
               ),
+            ),
+          ),
+
+          // XP Popup
+          Center(
+            child: AnimatedBuilder(
+              animation: _xpAnimController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _xpOpacity.value,
+                  child: SlideTransition(
+                    position: _xpOffset,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '+$_earnedXp XP',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFFD246),
+                            shadows: [
+                              Shadow(blurRadius: 12, color: Colors.black54),
+                            ],
+                          ),
+                        ),
+                        if (_showLevelUp)
+                          Container(
+                            margin: EdgeInsets.only(top: 12),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD246),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'LEVEL UP!',
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -445,7 +551,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
 
   Widget _planetBanner(PlanetInfo planet, int stayDay, int remain) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: _panelBg,
         borderRadius: BorderRadius.circular(10),
@@ -506,7 +612,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
 
   Widget _moodSection() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 14),
       decoration: BoxDecoration(
         color: _moodCardBg,
         borderRadius: BorderRadius.circular(12),
@@ -541,7 +647,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                     onTap: () => setState(() => _moodIndex = i),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
                       ),
@@ -593,7 +699,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 10),
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: pc.withValues(alpha: 0.2)),
@@ -621,13 +727,13 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+            padding: EdgeInsets.fromLTRB(10, 10, 10, 12),
             child: Column(
               children: List.generate(3, (i) {
                 final done = i < quests.length && quests[i];
                 final d = defs[i];
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -638,7 +744,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 8,
                         ),
@@ -650,7 +756,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(top: 2),
+                              padding: EdgeInsets.only(top: 2),
                               child: Container(
                                 width: 18,
                                 height: 18,
@@ -694,7 +800,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
                               ),
@@ -759,9 +865,14 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
 }
 
 class _PhotoThumb extends StatelessWidget {
-  const _PhotoThumb({required this.path, required this.onRemove});
+  const _PhotoThumb({
+    required this.path,
+    required this.loadBytes,
+    required this.onRemove,
+  });
 
   final String path;
+  final Future<Uint8List> Function(String path) loadBytes;
   final VoidCallback onRemove;
 
   @override
@@ -778,20 +889,31 @@ class _PhotoThumb extends StatelessWidget {
               color: const Color(0xFF0E1420),
               border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
-            child: FutureBuilder<Uint8List>(
-              future: XFile(path).readAsBytes(),
-              builder: (context, snap) {
-                if (snap.hasError || !snap.hasData) {
-                  return const ColoredBox(color: Color(0xFF1a1a1a));
-                }
-                return Image.memory(
-                  snap.data!,
-                  fit: BoxFit.cover,
-                  width: 72,
-                  height: 72,
-                );
-              },
-            ),
+            child: kIsWeb
+                ? Image.network(
+                    path,
+                    fit: BoxFit.cover,
+                    width: 72,
+                    height: 72,
+                    errorBuilder: (_, __, ___) =>
+                        const ColoredBox(color: Color(0xFF1a1a1a)),
+                  )
+                : FutureBuilder<Uint8List>(
+                    future: loadBytes(path),
+                    builder: (context, snap) {
+                      if (snap.hasError || !snap.hasData) {
+                        return const ColoredBox(color: Color(0xFF1a1a1a));
+                      }
+                      return Image.memory(
+                        snap.data!,
+                        fit: BoxFit.cover,
+                        width: 72,
+                        height: 72,
+                        gaplessPlayback: true,
+                        filterQuality: FilterQuality.low,
+                      );
+                    },
+                  ),
           ),
         ),
         Positioned(
@@ -803,7 +925,7 @@ class _PhotoThumb extends StatelessWidget {
             child: InkWell(
               onTap: onRemove,
               customBorder: const CircleBorder(),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(2),
                 child: Icon(Icons.close, size: 14, color: Colors.white70),
               ),
