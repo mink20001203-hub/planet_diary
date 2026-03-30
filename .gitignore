@@ -47,9 +47,6 @@ app.*.map.json
 *.hive
 *.lock
 
-# Generated Dart files
-lib/models/diary_entry.g.dart
-
 # VS Code settings (선택 — 팀 작업 아니면 제외 권장)
 .vscode/
 
