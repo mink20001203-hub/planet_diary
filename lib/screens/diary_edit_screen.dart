@@ -2,6 +2,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ import '../providers/quest_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/xp_provider.dart';
 
-/// tripDay 湲곗? ?쇨린 ?몄쭛 (Hive??diaryProvider.save濡??곌껐)
+/// tripDay 기준 일기 편집
 class DiaryEditScreen extends ConsumerStatefulWidget {
   const DiaryEditScreen({super.key, required this.tripDay});
 
@@ -51,7 +52,6 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     });
   }
 
-  static final _tripStart = DateTime(2025, 1, 1);
   static const _monthAbbr = [
     'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
     'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
@@ -73,21 +73,20 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   final List<String> _photoPaths = [];
   final Map<String, Uint8List> _photoBytesCache = {};
   final ImagePicker _picker = ImagePicker();
+  late final ScrollController _moodScrollController;
   bool _hydrated = false;
 
-  DateTime get _dateForTrip =>
-      _tripStart.add(Duration(days: widget.tripDay - 1));
-
-  String get _dateHeaderLine {
-    final d = _dateForTrip;
+  String _dateHeaderLine(DateTime date) {
+    final d = date;
     final m = _monthAbbr[d.month - 1];
-    return '${d.year} 쨌 $m 쨌 ${d.day.toString().padLeft(2, '0')}';
+    return '${d.year}년 $m월 ${d.day.toString().padLeft(2, '0')}일';
   }
 
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController();
+    _moodScrollController = ScrollController();
     _textController.addListener(() => setState(() {}));
 
     _xpAnimController = AnimationController(
@@ -113,6 +112,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   @override
   void dispose() {
     _textController.dispose();
+    _moodScrollController.dispose();
     _xpAnimController.dispose();
     super.dispose();
   }
@@ -139,6 +139,8 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   }
 
   Future<void> _saveToHive({required bool popAfter}) async {
+    final existing = ref.read(diaryProvider)[widget.tripDay];
+    final isFirstComplete = existing == null;
     final quests = ref.read(questProvider.notifier).getQuests(widget.tripDay);
     final entry = DiaryEntry(
       tripDay: widget.tripDay,
@@ -152,21 +154,24 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     final messenger = ScaffoldMessenger.of(context);
     await ref.read(diaryProvider.notifier).save(entry);
 
-    // XP ?뺤궛
     int totalEarned = 0;
-    totalEarned += 10; // ?쇨린 ?묒꽦
-    if (_photoPaths.isNotEmpty) totalEarned += 5; // ?ъ쭊
-    final doneCount = quests.where((q) => q).length;
-    totalEarned += (doneCount * 15); // ?섏뒪??
-
-    final leveledUp = ref.read(xpProvider.notifier).addXp(totalEarned);
-    ref.read(xpProvider.notifier).checkStreak(widget.tripDay);
+    var leveledUp = false;
+    if (isFirstComplete) {
+      totalEarned += 10;
+      if (_photoPaths.isNotEmpty) totalEarned += 5;
+      final doneCount = quests.where((q) => q).length;
+      totalEarned += (doneCount * 15);
+      leveledUp = ref.read(xpProvider.notifier).addXp(totalEarned);
+      ref.read(xpProvider.notifier).checkStreak(widget.tripDay);
+    }
 
     setState(() {
       _earnedXp = totalEarned;
       _showLevelUp = leveledUp;
     });
-    _xpAnimController.forward(from: 0);
+    if (totalEarned > 0) {
+      _xpAnimController.forward(from: 0);
+    }
     
     if (!mounted) return;
     if (popAfter) {
@@ -178,11 +183,18 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           backgroundColor: const Color(0xFF1a1a1a),
           behavior: SnackBarBehavior.floating,
           content: Text(
-            'DAY ${widget.tripDay} 湲곕줉 ?꾨즺 (+$totalEarned XP)',
-            style: GoogleFonts.spaceMono(
-              color: const Color(0xFFFFD246),
-              fontSize: 13,
-            ),
+            isFirstComplete
+                ? 'DAY ${widget.tripDay} 기록 완료 (+$totalEarned XP)'
+                : '기존 기록을 수정 저장했어요.',
+            style: isFirstComplete
+                ? GoogleFonts.spaceMono(
+                    color: const Color(0xFFFFD246),
+                    fontSize: 13,
+                  )
+                : GoogleFonts.notoSansKr(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
           ),
         ),
       );
@@ -193,7 +205,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           backgroundColor: const Color(0xFF1a1a1a),
           behavior: SnackBarBehavior.floating,
           content: Text(
-            '?꾩떆 ??λ릺?덉뒿?덈떎.',
+            '임시 저장되었습니다.',
             style: GoogleFonts.spaceMono(
               color: Colors.white70,
               fontSize: 12,
@@ -255,6 +267,59 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
       );
     }
 
+    final tripState = ref.watch(tripProvider);
+    final tripStart = tripState.startDate;
+    final dateForTrip =
+        tripStart.add(Duration(days: widget.tripDay - 1));
+    final isFutureEntry = DateUtils.dateOnly(dateForTrip)
+        .isAfter(DateUtils.dateOnly(tripState.today));
+    if (isFutureEntry) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF020408),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    InkWell(
+                      onTap: () => context.pop(),
+                      child: Text(
+                        '← CALENDAR',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 11,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      _dateHeaderLine(dateForTrip),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '아직 지나지 않은 날짜예요.\n오늘 이후 일기는 작성할 수 없어요.',
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 14,
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final planet = planetForDay(widget.tripDay);
     final stayDay = widget.tripDay - planet.startDay + 1;
     final remain = planet.days - stayDay;
@@ -284,7 +349,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _topBar(),
+                      _topBar(_dateHeaderLine(dateForTrip)),
                       const SizedBox(height: 16),
                       _planetBanner(planet, stayDay, remain),
                       const SizedBox(height: 22),
@@ -307,7 +372,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                               counterText: '',
                               filled: true,
                               fillColor: const Color(0xFF0E1420),
-                              hintText: '${planet.name}?먯꽌???ㅻ뒛??湲곕줉?섏꽭??..',
+                              hintText: '${planet.name}에서의 하루를 기록해보세요..',
                               hintStyle: GoogleFonts.spaceMono(
                                 color: Colors.white.withOpacity(0.3),
                                 height: 1.75,
@@ -342,7 +407,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        '?ъ쭊 湲곕줉',
+                        '사진 기록',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
                           color: Colors.white.withOpacity(0.3),
@@ -495,13 +560,13 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     );
   }
 
-  Widget _topBar() {
+  Widget _topBar(String dateHeaderLine) {
     return Row(
       children: [
         InkWell(
           onTap: () => context.pop(),
           child: Text(
-            '??CALENDAR',
+            '← CALENDAR',
             style: GoogleFonts.spaceMono(
               fontSize: 11,
               color: Colors.white.withOpacity(0.35),
@@ -513,7 +578,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           child: Column(
             children: [
               Text(
-                _dateHeaderLine,
+                dateHeaderLine,
                 style: GoogleFonts.spaceMono(
                   fontSize: 11,
                   color: const Color(0xFFFFD246).withOpacity(0.6),
@@ -588,7 +653,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '泥대쪟 $stayDay?쇱감 쨌 $remain???⑥쓬',
+                  '체류 $stayDay일째 · $remain일 남음',
                   style: GoogleFonts.spaceMono(
                     fontSize: 10,
                     color: Colors.white.withOpacity(0.35),
@@ -624,7 +689,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '?ㅻ뒛??媛먯젙',
+            '오늘의 감정',
             style: GoogleFonts.spaceMono(
               fontSize: 9,
               color: Colors.white.withOpacity(0.25),
@@ -633,46 +698,61 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _moods.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
-                final m = _moods[i];
-                final sel = i == _moodIndex;
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => setState(() => _moodIndex = i),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: sel
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.white.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: sel
-                              ? Colors.white.withOpacity(0.25)
-                              : Colors.white.withOpacity(0.08),
+            height: 42,
+            child: ScrollConfiguration(
+              behavior: const MaterialScrollBehavior().copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: Scrollbar(
+                controller: _moodScrollController,
+                thumbVisibility: true,
+                child: ListView.separated(
+                  controller: _moodScrollController,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _moods.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) {
+                    final m = _moods[i];
+                    final sel = i == _moodIndex;
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => setState(() => _moodIndex = i),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: sel
+                                  ? Colors.white.withOpacity(0.25)
+                                  : Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                          child: Text(
+                            '${m.emoji}${m.label}',
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 10,
+                              color: Colors.white.withOpacity(0.85),
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        '${m.emoji}${m.label}',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.85),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ],
@@ -717,7 +797,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                   ),
                 ),
                 Text(
-                  '$doneCount/3 ?꾨즺',
+                  '$doneCount/3 완료',
                   style: GoogleFonts.spaceMono(
                     fontSize: 10,
                     color: Colors.white.withOpacity(0.45),
@@ -785,7 +865,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                             Expanded(
                               child: Text(
                                 d.title,
-                                style: GoogleFonts.spaceMono(
+                                style: GoogleFonts.notoSansKr(
                                   fontSize: 11,
                                   height: 1.35,
                                   color: Colors.white.withOpacity(
@@ -983,58 +1063,53 @@ class _DiaryStarfieldPainter extends CustomPainter {
 
 List<({String title, int xp})> _questsForPlanet(String planetNameKr) {
   const fallback = <({String title, int xp})>[
-    (title: 'Record one clear moment from today', xp: 15),
-    (title: 'Try one small challenge and note it', xp: 20),
-    (title: 'Write one thing to do tomorrow', xp: 25),
+    (title: '오늘 한 번도 안 해본 새로운 것 시도하기', xp: 15),
+    (title: '10분 안에 할 수 있는 일 3가지 끝내기', xp: 20),
+    (title: '오늘 하루 가장 빠르게 결정한 순간 기록하기', xp: 25),
   ];
 
   const data = <String, List<({String title, int xp})>>{
-    'Mercury': [
-      (title: 'Move fast: finish one small task quickly', xp: 15),
-      (title: 'Switch context once and recover focus', xp: 20),
-      (title: 'Log what improved after the switch', xp: 25),
+    '수성': [
+      (title: '오늘 한 번도 안 해본 새로운 것 시도하기', xp: 15),
+      (title: '10분 안에 할 수 있는 일 3가지 끝내기', xp: 20),
+      (title: '오늘 하루 가장 빠르게 결정한 순간 기록하기', xp: 25),
     ],
-    'Venus': [
-      (title: 'Find one beautiful detail from today', xp: 15),
-      (title: 'Send one warm message to someone', xp: 20),
-      (title: 'Write one gratitude note', xp: 25),
+    '금성': [
+      (title: '소중한 사람에게 연락하거나 메시지 보내기', xp: 15),
+      (title: '오늘 가장 아름답다고 느낀 것 기록하기', xp: 20),
+      (title: '나를 위한 작은 선물 하나 하기', xp: 25),
     ],
-    'Earth': [
-      (title: 'Notice one natural sound or light', xp: 15),
-      (title: 'Keep one healthy routine today', xp: 20),
-      (title: 'Write one grounding sentence', xp: 25),
+    '지구': [
+      (title: '30분 이상 바깥에서 걷기', xp: 15),
+      (title: '오늘 먹은 음식 중 가장 맛있었던 것 기록하기', xp: 20),
+      (title: '자연에서 발견한 것 사진 찍기', xp: 25),
     ],
-    'Mars': [
-      (title: 'Define one bold action for today', xp: 15),
-      (title: 'Finish one task with strong focus', xp: 20),
-      (title: 'Review one lesson from the action', xp: 25),
+    '화성': [
+      (title: '오늘 미뤄왔던 도전 하나 시작하기', xp: 15),
+      (title: '30분 이상 운동하기', xp: 20),
+      (title: '불편하지만 해야 할 일 하나 완료하기', xp: 25),
     ],
-    'Jupiter': [
-      (title: 'Learn one new thing today', xp: 15),
-      (title: 'Ask one better question', xp: 20),
-      (title: 'Write one expansion idea', xp: 25),
+    '목성': [
+      (title: '책이나 영상으로 새로운 것 배우기', xp: 15),
+      (title: '오늘 배운 것 3줄로 요약해서 기록하기', xp: 20),
+      (title: '관심 있던 분야 10분 탐구하기', xp: 25),
     ],
-    'Saturn': [
-      (title: 'Keep one promise to yourself', xp: 15),
-      (title: 'Do one routine with consistency', xp: 20),
-      (title: 'Plan one realistic next step', xp: 25),
+    '토성': [
+      (title: '미뤄왔던 일 하나 완전히 끝내기', xp: 15),
+      (title: '오늘 하루 계획 세우고 실천율 기록하기', xp: 20),
+      (title: '불필요한 것 3가지 정리하기', xp: 25),
     ],
-    'Uranus': [
-      (title: 'Try one unconventional idea', xp: 15),
-      (title: 'Break one stale pattern safely', xp: 20),
-      (title: 'Capture one insight from surprise', xp: 25),
+    '천왕성': [
+      (title: '아이디어 5가지 적어보기', xp: 15),
+      (title: '평소와 다른 방법으로 문제 해결해보기', xp: 20),
+      (title: '새로운 취미나 활동 10분 체험하기', xp: 25),
     ],
-    'Neptune': [
-      (title: 'Describe one feeling with precision', xp: 15),
-      (title: 'Write one dream-like image', xp: 20),
-      (title: 'Summarize your emotional tone', xp: 25),
+    '해왕성': [
+      (title: '오늘의 감정을 3줄로 솔직하게 기록하기', xp: 15),
+      (title: '어젯밤 꿈이나 최근 바람 기록하기', xp: 20),
+      (title: '5분 명상 또는 조용히 혼자 있는 시간 갖기', xp: 25),
     ],
   };
-
-  final planet = kPlanets.firstWhere(
-    (p) => p.name == planetNameKr,
-    orElse: () => kPlanets[2],
-  );
-  return data[planet.en] ?? fallback;
+  return data[planetNameKr] ?? fallback;
 }
 

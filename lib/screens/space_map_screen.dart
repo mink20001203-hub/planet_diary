@@ -407,6 +407,14 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     final xpState = ref.watch(xpProvider);
     const nextLevelXp = 100;
     final currentXp = xpState.totalXp % 100;
+    final start = DateTime(
+      trip.startDate.year,
+      trip.startDate.month,
+      trip.startDate.day,
+    );
+    final end = start.add(const Duration(days: 364));
+    String fmt(DateTime d) =>
+        '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
 
     final progress = (currentXp / nextLevelXp).clamp(0.0, 1.0);
 
@@ -453,7 +461,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
               ),
               const SizedBox(height: 2),
               Text(
-                '泥대쪟 ${trip.stayDay}?쇱감 쨌 ${trip.remainDays}???⑥쓬',
+                '체류 ${trip.stayDay}일째 · ${trip.remainDays}일 남음',
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
                   color: Colors.white.withOpacity(0.3),
@@ -511,7 +519,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
           top: sunBelowTop,
           child: Center(
             child: Text(
-              '2025.01.01 ??2025.12.31',
+              '${fmt(start)} ~ ${fmt(end)}',
               style: GoogleFonts.spaceMono(
                 fontSize: 8,
                 color: Colors.white.withOpacity(0.3),
@@ -532,6 +540,19 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 letterSpacing: 2,
               ),
             ),
+          ),
+        ),
+        Positioned(
+          right: pad,
+          bottom: bottomPad - 2,
+          child: IconButton(
+            onPressed: () => context.push('/settings'),
+            icon: const Icon(
+              Icons.settings,
+              color: Colors.white38,
+              size: 18,
+            ),
+            splashRadius: 18,
           ),
         ),
       ],
@@ -860,4 +881,3 @@ class _PlanetBodyPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PlanetBodyPainter oldDelegate) => false;
 }
-

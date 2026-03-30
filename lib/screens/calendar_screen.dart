@@ -11,8 +11,8 @@ import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/xp_provider.dart';
 
-/// TODO(Hive): ?쇨린/?ъ쭊/?섏뒪??吏묎퀎瑜?diaryProvider + Hive ?숆린?붾쭔?쇰줈 泥섎━?섍퀬
-/// ?꾨옒 mock 留듭? ?쒓굅?섏꽭??
+/// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화 기반으로 정리
+/// 아래 mock 문구는 제거 필요
 
 class _DayMeta {
   const _DayMeta({
@@ -58,7 +58,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     });
   }
 
-  static final _tripStart = DateTime(2025, 1, 1);
   static const _monthAbbr = [
     'JAN',
     'FEB',
@@ -83,10 +82,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     'SUN',
   ];
 
-  /// TableCalendar 踰붿쐞 (怨좎젙)
-  static final _firstDay = DateTime(2025, 1, 1);
-  static final _lastDay = DateTime(2025, 12, 31);
-
   late DateTime _focusedDay;
   DateTime? _selectedDay;
   bool _initialized = false;
@@ -94,40 +89,56 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    // 珥덇린?? ?ㅻ뒛 ?좎쭨(留ㅽ븨??2025???좎쭨)濡??ъ빱??諛??좏깮
+    // 초기값은 오늘 날짜(매핑된 2025 날짜)로 설정
     final trip = ref.read(tripProvider);
-    _focusedDay = _clampToTripCalendar(trip.today);
+    _focusedDay = _clampToTripCalendar(
+      trip.today,
+      startDate: trip.startDate,
+    );
     _selectedDay = _focusedDay;
     _initialized = true;
   }
 
-  /// [firstDay, lastDay] 諛뽰쓽 ?좎쭨瑜?clamp (assertion: focusedDay ??lastDay)
-  DateTime _clampToTripCalendar(DateTime d) {
-    if (d.isBefore(_firstDay)) return _firstDay;
-    if (d.isAfter(_lastDay)) return _lastDay;
+  /// [firstDay, lastDay] 밖의 날짜는 clamp
+  DateTime _clampToTripCalendar(
+    DateTime d, {
+    required DateTime startDate,
+  }) {
+    final firstDay = DateTime(startDate.year, startDate.month, startDate.day);
+    final lastDay = firstDay.add(const Duration(days: 364));
+    if (d.isBefore(firstDay)) return firstDay;
+    if (d.isAfter(lastDay)) return lastDay;
     return d;
   }
 
-  /// ?ㅻ뒛??lastDay ?댄썑硫?lastDay, ?댁쟾?대㈃ ?ㅻ뒛 (2025 ?댁쟾?대㈃ firstDay)
+  /// lastDay 이후면 lastDay, 이전이면 firstDay
   DateTime _safeFocusedDayFromToday() {
-    final today = ref.read(tripProvider).today;
-    if (today.isAfter(_lastDay)) return _lastDay;
-    if (today.isBefore(_firstDay)) return _firstDay;
+    final trip = ref.read(tripProvider);
+    final firstDay = DateTime(
+      trip.startDate.year,
+      trip.startDate.month,
+      trip.startDate.day,
+    );
+    final lastDay = firstDay.add(const Duration(days: 364));
+    final today = trip.today;
+    if (today.isAfter(lastDay)) return lastDay;
+    if (today.isBefore(firstDay)) return firstDay;
     return today;
   }
 
-  int _tripDayFromDate(DateTime d) {
-    return d.difference(_tripStart).inDays + 1;
+  int _tripDayFromDate(DateTime d, DateTime startDate) {
+    final firstDay = DateTime(startDate.year, startDate.month, startDate.day);
+    return d.difference(firstDay).inDays + 1;
   }
 
   _DayMeta _effectiveMeta(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null) {
-      // ?몃???= questDone 以??섎굹?쇰룄 true
+      // 하나라도 questDone=true면 퀘스트 완료로 간주
       final anyQuest = e.questDone.any((bool x) => x);
       return _DayMeta(
-        hasDiary: true, // ?곗깋 = ?대떦 tripDay??DiaryEntry 議댁옱
-        hasPhoto: e.photoPaths.isNotEmpty, // ?뚮???= photoPaths 鍮꾩뼱?덉? ?딆쓬
+        hasDiary: true,
+        hasPhoto: e.photoPaths.isNotEmpty,
         questClear: anyQuest,
       );
     }
@@ -136,19 +147,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   String _formatHudDate(DateTime d) {
     final m = _monthAbbr[d.month - 1];
-    return '${d.year} 쨌 $m 쨌 ${d.day.toString().padLeft(2, '0')}';
+    return '${d.year}년 $m월 ${d.day.toString().padLeft(2, '0')}일';
   }
 
   String _weekdayShort(DateTime d) {
     return _weekdayEn[(d.weekday - 1) % 7];
   }
 
-  void _jumpToPlanetMonth(PlanetInfo planet) {
-    final targetDay = DateTime(2025, 1, 1).add(
+  void _jumpToPlanetMonth(PlanetInfo planet, DateTime startDate) {
+    final targetDay = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    ).add(
       Duration(days: planet.startDay - 1),
     );
     setState(() {
-      final safe = _clampToTripCalendar(targetDay);
+      final safe = _clampToTripCalendar(
+        targetDay,
+        startDate: startDate,
+      );
       _focusedDay = safe;
       _selectedDay = safe;
     });
@@ -169,11 +187,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String? _previewText(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null && e.text.trim().isNotEmpty) {
-      // ?좏깮???좎쭨??DiaryEntry ?덉쑝硫?text 泥?以??쒖떆
+      // 선택한 날짜에 일기가 있으면 첫 줄 표시
       final firstLine = e.text.trim().split('\n').first;
       return firstLine.length > 80 ? '${firstLine.substring(0, 80)}...' : firstLine;
     }
     return null;
+  }
+
+  bool _isFutureDate(DateTime day, DateTime now) {
+    final selected = DateUtils.dateOnly(day);
+    final today = DateUtils.dateOnly(now);
+    return selected.isAfter(today);
   }
 
   @override
@@ -188,7 +212,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _selectedDay = safe;
     }
 
-    // ?곗씠??濡쒕뵫 泥댄겕 (珥덇린???꾩씠硫?濡쒕뵫 ?쒖떆)
+    // 데이터 로딩 체크
     if (!_initialized) {
       return Scaffold(
         backgroundColor: const Color(0xFF020408),
@@ -213,7 +237,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final stats = _stats(diaryMap);
     final headerTextStyle = GoogleFonts.spaceMono(
       color: Colors.white.withOpacity(0.6),
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: FontWeight.w500,
     );
     final dowStyle = GoogleFonts.spaceMono(
@@ -254,6 +278,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
                         child: _buildCalendar(
+                          trip: trip,
                           diaryMap: diaryMap,
                           headerTextStyle: headerTextStyle,
                           dowStyle: dowStyle,
@@ -321,7 +346,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               Text(
                 _formatHudDate(trip.today),
                 style: GoogleFonts.spaceMono(
-                  fontSize: 24,
+                  fontSize: 20,
                   color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                   height: 1.15,
@@ -376,7 +401,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               Text(
                 'DAY ${trip.tripDay.toString().padLeft(3, '0')} / 365',
                 style: GoogleFonts.spaceMono(
-                  fontSize: 20,
+                  fontSize: 17,
                   color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                 ),
@@ -392,7 +417,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                '泥대쪟 ${trip.stayDay}?쇱감 쨌 ${trip.remainDays}???⑥쓬',
+                '체류 ${trip.stayDay}일째 · ${trip.remainDays}일 남음',
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
                   color: Colors.white.withOpacity(0.3),
@@ -418,7 +443,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _jumpToPlanetMonth(p),
+                  onTap: () => _jumpToPlanetMonth(p, trip.startDate),
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     width: 108,
@@ -467,7 +492,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${p.days}??泥대쪟',
+                          '${p.days}일 체류',
                           style: GoogleFonts.spaceMono(
                             fontSize: 9,
                             color: Colors.white.withOpacity(0.35),
@@ -486,16 +511,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _buildCalendar({
+    required TripState trip,
     required Map<int, DiaryEntry> diaryMap,
     required TextStyle headerTextStyle,
     required TextStyle dowStyle,
   }) {
+    final firstDay = DateTime(
+      trip.startDate.year,
+      trip.startDate.month,
+      trip.startDate.day,
+    );
+    final lastDay = firstDay.add(const Duration(days: 364));
+
     return SizedBox(
       height: 400,
       child: TableCalendar<void>(
-        firstDay: _firstDay,
-        lastDay: _lastDay,
-        focusedDay: _clampToTripCalendar(_focusedDay),
+        firstDay: firstDay,
+        lastDay: lastDay,
+        focusedDay: _clampToTripCalendar(
+          _focusedDay,
+          startDate: trip.startDate,
+        ),
         rowHeight: 52,
         calendarFormat: CalendarFormat.month,
         availableCalendarFormats: const {CalendarFormat.month: 'Month'},
@@ -506,11 +542,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         onDaySelected: (selected, focused) {
           setState(() {
             _selectedDay = selected;
-            _focusedDay = _clampToTripCalendar(focused);
+            _focusedDay = _clampToTripCalendar(
+              focused,
+              startDate: trip.startDate,
+            );
           });
         },
         onPageChanged: (focused) {
-          setState(() => _focusedDay = _clampToTripCalendar(focused));
+          setState(() {
+            _focusedDay = _clampToTripCalendar(
+              focused,
+              startDate: trip.startDate,
+            );
+          });
         },
         headerStyle: HeaderStyle(
           titleCentered: true,
@@ -556,6 +600,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             return _dayCell(
               day,
               focusedDay,
+              trip.startDate,
               diaryMap,
               isToday: today,
               isSelected: selected,
@@ -570,12 +615,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget _dayCell(
     DateTime day,
     DateTime focusedDay,
+    DateTime startDate,
     Map<int, DiaryEntry> diaryMap, {
     bool isToday = false,
     bool isSelected = false,
     bool isOutside = false,
   }) {
-    final tripDay = _tripDayFromDate(day);
+    final tripDay = _tripDayFromDate(day, startDate);
     if (tripDay < 1 || tripDay > 365) {
       return const SizedBox.shrink();
     }
@@ -683,8 +729,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   ) {
     final sel = _selectedDay;
     final open = sel != null;
+    final isFuture = sel != null && _isFutureDate(sel, trip.today);
     final tripDay =
-        sel == null ? trip.tripDay : _tripDayFromDate(sel);
+        sel == null ? trip.tripDay : _tripDayFromDate(sel, trip.startDate);
     final planet = planetForDay(tripDay);
     final meta = _effectiveMeta(tripDay, diaryMap);
     final preview = _previewText(tripDay, diaryMap);
@@ -702,7 +749,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => context.push('/diary/$tripDay'),
+                onTap: isFuture
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF1A1A1A),
+                            content: Text(
+                              '미래 날짜의 일기는 아직 작성할 수 없어요.',
+                              style: GoogleFonts.notoSansKr(fontSize: 12),
+                            ),
+                          ),
+                        );
+                      }
+                    : () => context.push('/diary/$tripDay'),
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -763,7 +824,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       const SizedBox(height: 8),
                       Expanded(
                         child: Text(
-                          preview ?? '?꾩쭅 湲곕줉???녿뒗 ?좎씠?먯슂.',
+                          preview ??
+                              (isFuture
+                                  ? '아직 지나지 않은 날짜예요.'
+                                  : '아직 기록이 없는 날이에요.'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.spaceMono(
@@ -781,9 +845,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          _badge('?쇨린', meta.hasDiary),
+                          _badge('일기', meta.hasDiary),
                           const SizedBox(width: 8),
-                          _badge('?ъ쭊', meta.hasPhoto),
+                          _badge('사진', meta.hasPhoto),
                           const SizedBox(width: 8),
                           _badge('QUEST', meta.questClear),
                         ],
@@ -864,7 +928,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       children: [
         Row(
           children: [
-            cell('湲곕줉?꾨즺?쇱닔', '${stats.recorded}'),
+            cell('기록 완료일수', '${stats.recorded}'),
             const SizedBox(width: 8),
             cell('Quest Cleared', '${stats.questsCleared}'),
             const SizedBox(width: 8),
@@ -885,7 +949,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('?뵦', style: TextStyle(fontSize: 14)),
+                const Text('🔥', style: TextStyle(fontSize: 14)),
                 const SizedBox(width: 8),
                 Text(
                   '${xpState.streak} day streak',

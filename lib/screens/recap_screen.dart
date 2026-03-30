@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -25,15 +25,24 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   final Map<String, Uint8List> _photoBytesCache = {};
 
   static const _moods = <({String emoji, String label})>[
-    (emoji: '😌', label: 'Calm'),
-    (emoji: '🤩', label: 'Excited'),
-    (emoji: '😴', label: 'Tired'),
-    (emoji: '⚡', label: 'Energetic'),
-    (emoji: '🌌', label: 'Mystic'),
-    (emoji: '🧠', label: 'Focused'),
-    (emoji: '😊', label: 'Happy'),
-    (emoji: '😮', label: 'Amazed'),
+    (emoji: '\u{1F60C}', label: 'Calm'),
+    (emoji: '\u{1F929}', label: 'Excited'),
+    (emoji: '\u{1F634}', label: 'Tired'),
+    (emoji: '\u26A1', label: 'Energetic'),
+    (emoji: '\u{1F30C}', label: 'Mystic'),
+    (emoji: '\u{1F9E0}', label: 'Focused'),
+    (emoji: '\u{1F60A}', label: 'Happy'),
+    (emoji: '\u{1F62E}', label: 'Amazed'),
   ];
+
+  static const _kTitleMain = '\uD0DC\uC591\uACC4 \uC5EC\uD589 \uB9AC\uD3EC\uD2B8';
+  static const _kRecordedDays = '\uAE30\uB85D\uD55C \uC77C\uC218';
+  static const _kPlanetStats = '\uD589\uC131\uBCC4 \uAE30\uB85D \uD1B5\uACC4';
+  static const _kMoodDist = '\uAC10\uC815 \uBD84\uD3EC';
+  static const _kQuestStats = '\uD018\uC2A4\uD2B8 \uD1B5\uACC4';
+  static const _kMoments = '\uAE30\uC5B5\uC5D0 \uB0A8\uB294 \uC21C\uAC04';
+  static const _kNoPhotos = '\uC544\uC9C1 \uC0AC\uC9C4 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694';
+  static const _kQuestRate = '\uC804\uCCB4 \uD018\uC2A4\uD2B8 \uB2EC\uC131\uB960';
 
   @override
   void initState() {
@@ -117,21 +126,26 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          '2025 Planet Journey Recap',
-          style: GoogleFonts.spaceMono(
+        const Text(
+          _kTitleMain,
+          style: TextStyle(
             fontSize: 22,
-            color: Colors.white.withOpacity(0.9),
+            color: Color.fromRGBO(255, 255, 255, 0.9),
             fontWeight: FontWeight.bold,
+            fontFamily: null,
           ),
         ),
         const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '珥?湲곕줉 ?쇱닔',
-              style: GoogleFonts.spaceMono(color: Colors.white54, fontSize: 12),
+            const Text(
+              _kRecordedDays,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white54,
+                fontFamily: null,
+              ),
             ),
             Text(
               '$recorded / 365 DAY',
@@ -160,17 +174,24 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('?됱꽦蹂?湲곕줉 ?듦퀎'),
+        const Text(
+          _kPlanetStats,
+          style: TextStyle(
+            fontSize: 10,
+            color: Color.fromRGBO(255, 255, 255, 0.3),
+            letterSpacing: 2,
+            fontFamily: null,
+          ),
+        ),
         const SizedBox(height: 16),
         ...kPlanets.map((p) {
           final entries = diaryMap.values.where((e) {
             return e.tripDay >= p.startDay && e.tripDay < p.startDay + p.days;
           }).toList();
-          
+
           final recCount = entries.length;
           final progress = (recCount / p.days).clamp(0.0, 1.0);
-          
-          // ???媛먯젙 怨꾩궛
+
           String topEmoji = '-';
           if (entries.isNotEmpty) {
             final moodCounts = <int, int>{};
@@ -190,7 +211,8 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                 Container(
                   width: 12,
                   height: 12,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: p.color),
+                  decoration:
+                      BoxDecoration(shape: BoxShape.circle, color: p.color),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -200,8 +222,22 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(p.name, style: GoogleFonts.spaceMono(fontSize: 13, color: Colors.white70)),
-                          Text('$recCount / ${p.days}d', style: GoogleFonts.spaceMono(fontSize: 11, color: Colors.white38)),
+                          Text(
+                            p.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                              fontFamily: null,
+                            ),
+                          ),
+                          Text(
+                            '$recCount / ${p.days}\uC77C',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white38,
+                              fontFamily: null,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -211,7 +247,9 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                           value: progress,
                           minHeight: 3,
                           backgroundColor: Colors.white.withOpacity(0.05),
-                          valueColor: AlwaysStoppedAnimation<Color>(p.color.withOpacity(0.6)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            p.color.withOpacity(0.6),
+                          ),
                         ),
                       ),
                     ],
@@ -239,13 +277,25 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('媛먯젙 遺꾪룷'),
+        const Text(
+          _kMoodDist,
+          style: TextStyle(
+            fontSize: 10,
+            color: Color.fromRGBO(255, 255, 255, 0.3),
+            letterSpacing: 2,
+            fontFamily: null,
+          ),
+        ),
         const SizedBox(height: 20),
         SizedBox(
           height: 200,
           child: CustomPaint(
             size: Size.infinite,
-            painter: _MoodBarPainter(counts: counts, maxVal: maxVal, moods: _moods),
+            painter: _MoodBarPainter(
+              counts: counts,
+              maxVal: maxVal,
+              moods: _moods,
+            ),
           ),
         ),
       ],
@@ -255,19 +305,18 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   Widget _buildQuestStats(Map<int, DiaryEntry> diaryMap) {
     int totalQuests = 0;
     int completedQuests = 0;
-    
-    final planetCompletion = <String, double>{};
 
     for (final p in kPlanets) {
-      int pTotal = p.days * 3;
+      final pTotal = p.days * 3;
       int pDone = 0;
-      final entries = diaryMap.values.where((e) => e.tripDay >= p.startDay && e.tripDay < p.startDay + p.days);
+      final entries = diaryMap.values.where(
+        (e) => e.tripDay >= p.startDay && e.tripDay < p.startDay + p.days,
+      );
       for (final e in entries) {
         pDone += e.questDone.where((q) => q).length;
       }
       totalQuests += pTotal;
       completedQuests += pDone;
-      planetCompletion[p.name] = (pDone / pTotal).clamp(0.0, 1.0);
     }
 
     final totalRate = totalQuests > 0 ? (completedQuests / totalQuests) : 0.0;
@@ -275,7 +324,15 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('?섏뒪???듦퀎'),
+        const Text(
+          _kQuestStats,
+          style: TextStyle(
+            fontSize: 10,
+            color: Color.fromRGBO(255, 255, 255, 0.3),
+            letterSpacing: 2,
+            fontFamily: null,
+          ),
+        ),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -300,9 +357,23 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Overall Quest Completion', style: GoogleFonts.spaceMono(color: Colors.white70, fontSize: 13)),
+                  const Text(
+                    _kQuestRate,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontFamily: null,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('$completedQuests missions completed', style: GoogleFonts.spaceMono(color: Colors.white38, fontSize: 11)),
+                  Text(
+                    '\uCD1D $completedQuests\uAC1C\uC758 \uD018\uC2A4\uD2B8 \uC644\uB8CC',
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontFamily: null,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -317,13 +388,21 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
         .where((e) => e.photoPaths.isNotEmpty)
         .toList()
       ..sort((a, b) => b.tripDay.compareTo(a.tripDay));
-    
+
     final recent6 = photoEntries.take(6).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('湲곗뼲???⑤뒗 ?쒓컙'),
+        const Text(
+          _kMoments,
+          style: TextStyle(
+            fontSize: 10,
+            color: Color.fromRGBO(255, 255, 255, 0.3),
+            letterSpacing: 2,
+            fontFamily: null,
+          ),
+        ),
         const SizedBox(height: 16),
         if (recent6.isEmpty)
           Container(
@@ -333,10 +412,14 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
               color: Colors.white.withOpacity(0.03),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
+            child: const Center(
               child: Text(
-                '?꾩쭅 ?ъ쭊 湲곕줉???놁뒿?덈떎.',
-                style: GoogleFonts.spaceMono(color: Colors.white24, fontSize: 12),
+                _kNoPhotos,
+                style: TextStyle(
+                  color: Colors.white24,
+                  fontSize: 12,
+                  fontFamily: null,
+                ),
               ),
             ),
           )
@@ -351,12 +434,12 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
               mainAxisSpacing: 10,
             ),
             itemBuilder: (context, index) {
-              final e = recent6[index];
+              final entry = recent6[index];
               return GestureDetector(
-                onTap: () => context.push('/diary/${e.tripDay}'),
+                onTap: () => context.push('/diary/${entry.tripDay}'),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: _buildRecapImage(e.photoPaths.first),
+                  child: _buildRecapImage(entry.photoPaths.first),
                 ),
               );
             },
@@ -381,7 +464,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
         path,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) =>
-            const ColoredBox(color: Color(0xFF1a1a1a)),
+            const ColoredBox(color: Color(0xFF1A1A1A)),
       );
     }
 
@@ -389,7 +472,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
       future: _readPhotoBytes(path),
       builder: (context, snap) {
         if (snap.hasError || !snap.hasData) {
-          return const ColoredBox(color: Color(0xFF1a1a1a));
+          return const ColoredBox(color: Color(0xFF1A1A1A));
         }
         return Image.memory(
           snap.data!,
@@ -402,17 +485,18 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   }
 
   Widget _buildSummary(int recorded, Map<int, DiaryEntry> diaryMap) {
-    String topPlanet = '紐⑹꽦';
+    var topPlanet = '\uBAA9\uC131';
     if (diaryMap.isNotEmpty) {
       final pCounts = <String, int>{};
       for (final e in diaryMap.values) {
         final p = planetForDay(e.tripDay);
         pCounts[p.name] = (pCounts[p.name] ?? 0) + 1;
       }
-      topPlanet = pCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+      topPlanet =
+          pCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
     }
 
-    int totalQ = 0;
+    var totalQ = 0;
     for (final e in diaryMap.values) {
       totalQ += e.questDone.where((q) => q).length;
     }
@@ -420,11 +504,20 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fadingText('?뱀떊? $recorded???숈븞 ?곗＜瑜??ы뻾?덉뒿?덈떎.', 0),
+        _fadingText(
+          '\uB2F9\uC2E0\uC740 $recorded\uC77C \uB3D9\uC548 \uC6B0\uC8FC\uB97C \uC5EC\uD589\uD588\uC2B5\uB2C8\uB2E4.',
+          0,
+        ),
         const SizedBox(height: 12),
-        _fadingText('媛???ㅻ옒 癒몃Ц ?됱꽦? $topPlanet?댁뿀?댁슂.', 1),
+        _fadingText(
+          '\uAC00\uC7A5 \uC624\uB798 \uBA38\uBB38 \uD589\uC131\uC740 $topPlanet\uC774\uC5C8\uC5B4\uC694.',
+          1,
+        ),
         const SizedBox(height: 12),
-        _fadingText('珥?$totalQ媛쒖쓽 ?섏뒪?몃? ?꾨즺?덉뒿?덈떎.', 2),
+        _fadingText(
+          '\uCD1D $totalQ\uAC1C\uC758 \uD018\uC2A4\uD2B8\uB97C \uC644\uB8CC\uD588\uC2B5\uB2C8\uB2E4.',
+          2,
+        ),
       ],
     );
   }
@@ -432,7 +525,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   Widget _fadingText(String text, int index) {
     final start = 0.4 + (index * 0.2);
     final end = (start + 0.3).clamp(0.0, 1.0);
-    
+
     return AnimatedBuilder(
       animation: _fadeInController,
       builder: (context, child) {
@@ -450,29 +543,24 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
       },
       child: Text(
         text,
-        style: GoogleFonts.spaceMono(
+        style: const TextStyle(
           fontSize: 15,
-          color: Colors.white.withOpacity(0.8),
+          color: Color.fromRGBO(255, 255, 255, 0.8),
           height: 1.5,
+          fontFamily: null,
         ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.spaceMono(
-        fontSize: 10,
-        color: Colors.white.withOpacity(0.3),
-        letterSpacing: 2,
       ),
     );
   }
 }
 
 class _MoodBarPainter extends CustomPainter {
-  _MoodBarPainter({required this.counts, required this.maxVal, required this.moods});
+  _MoodBarPainter({
+    required this.counts,
+    required this.maxVal,
+    required this.moods,
+  });
+
   final List<int> counts;
   final int maxVal;
   final List<({String emoji, String label})> moods;
@@ -490,10 +578,11 @@ class _MoodBarPainter extends CustomPainter {
       final isMax = maxVal > 0 && val == maxVal;
 
       final paint = Paint()
-        ..color = isMax ? const Color(0xFFFFD246) : Colors.white.withOpacity(0.15)
+        ..color = isMax
+            ? const Color(0xFFFFD246)
+            : Colors.white.withOpacity(0.15)
         ..style = PaintingStyle.fill;
 
-      // 諛?洹몃━湲?
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(40, y, barWidth.toDouble(), barHeight),
@@ -502,14 +591,12 @@ class _MoodBarPainter extends CustomPainter {
         paint,
       );
 
-      // ?대え吏 ?띿뒪???섏씤??(媛꾨왂??
       final tp = TextPainter(
         text: TextSpan(text: moods[i].emoji, style: const TextStyle(fontSize: 14)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(10, y - 2));
 
-      // ?섏튂
       final valTp = TextPainter(
         text: TextSpan(
           text: '$val',
@@ -527,6 +614,7 @@ class _MoodBarPainter extends CustomPainter {
 
 class _CircleChartPainter extends CustomPainter {
   _CircleChartPainter({required this.progress});
+
   final double progress;
 
   @override
@@ -559,4 +647,3 @@ class _CircleChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
