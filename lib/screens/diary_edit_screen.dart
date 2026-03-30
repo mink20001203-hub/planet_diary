@@ -101,6 +101,11 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
         ..clear()
         ..addAll(entry.photoPaths);
       ref.read(questProvider.notifier).setForDay(widget.tripDay, entry.questDone);
+    } else {
+      // 신규 일기면 퀘스트 상태 초기화
+      ref
+          .read(questProvider.notifier)
+          .setForDay(widget.tripDay, [false, false, false]);
     }
     setState(() {
       _hydrated = true;
@@ -173,13 +178,22 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_hydrated) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF020408),
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 1.0,
-          ),
+      return Scaffold(
+        backgroundColor: const Color(0xFF020408),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _DiaryStarfieldPainter(_starSamples),
+              ),
+            ),
+            const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white54,
+                strokeWidth: 1.0,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -193,7 +207,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
     final doneCount = quests.where((e) => e).length;
 
     final borderIdle = Colors.white.withValues(alpha: 0.15);
-    final borderFocus = Colors.white.withValues(alpha: 0.28);
+    final borderFocus = Colors.white.withValues(alpha: 0.3);
 
     return Scaffold(
       backgroundColor: const Color(0xFF020408),
@@ -229,13 +243,13 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                             style: GoogleFonts.spaceMono(
                               fontSize: 14,
                               height: 1.75,
-                              color: Colors.white.withValues(alpha: 0.92),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                             cursorColor: const Color(0xFFFFD246),
                             decoration: InputDecoration(
                               counterText: '',
                               filled: true,
-                              fillColor: _panelBg,
+                              fillColor: const Color(0xFF0E1420),
                               hintText: '${planet.name}에서의 오늘을 기록하세요...',
                               hintStyle: GoogleFonts.spaceMono(
                                 color: Colors.white.withValues(alpha: 0.3),
@@ -263,7 +277,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                               '${_textController.text.characters.length} / 500',
                               style: GoogleFonts.spaceMono(
                                 fontSize: 9,
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Colors.white.withValues(alpha: 0.3),
                               ),
                             ),
                           ),
@@ -274,7 +288,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                         '사진 기록',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: Colors.white.withValues(alpha: 0.3),
                           letterSpacing: 2,
                         ),
                       ),
@@ -302,7 +316,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                         '오늘의 퀘스트',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: Colors.white.withValues(alpha: 0.3),
                           letterSpacing: 2,
                         ),
                       ),
@@ -324,7 +338,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                                 side: BorderSide(
                                   color: Colors.white.withValues(alpha: 0.2),
                                 ),
-                                backgroundColor: _panelBg,
+                                backgroundColor: const Color(0xFF0E1420),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -333,7 +347,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                                 '임시저장',
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.85),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                 ),
                               ),
                             ),
@@ -345,9 +359,9 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 side: BorderSide(
-                                  color: planet.color.withValues(alpha: 0.5),
+                                  color: const Color(0xFFFFD246).withValues(alpha: 0.5),
                                 ),
-                                backgroundColor: planet.color.withValues(alpha: 0.2),
+                                backgroundColor: const Color(0xFFFFD246).withValues(alpha: 0.15),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -356,7 +370,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
                                 '기록 완료 →',
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 12,
-                                  color: planet.color.withValues(alpha: 0.95),
+                                  color: const Color(0xFFFFD246).withValues(alpha: 0.9),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

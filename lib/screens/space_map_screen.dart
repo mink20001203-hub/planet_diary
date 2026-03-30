@@ -415,7 +415,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 'MISSION LOG',
                 style: GoogleFonts.spaceMono(
                   fontSize: 9,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.5),
+                  color: const Color(0xFFFFD246).withValues(alpha: 0.6),
                   letterSpacing: 2.5,
                 ),
               ),
@@ -424,7 +424,8 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 'DAY ${trip.tripDay} / 365',
                 style: GoogleFonts.spaceMono(
                   fontSize: 20,
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -440,7 +441,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 '${trip.planet.name.toUpperCase()} SECTOR',
                 style: GoogleFonts.spaceMono(
                   fontSize: 11,
-                  color: const Color(0xFFC8A97A).withValues(alpha: 0.8),
+                  color: const Color(0xFFFFD246).withValues(alpha: 0.9),
                 ),
               ),
               const SizedBox(height: 2),
@@ -463,7 +464,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
               '2025.01.01 → 2025.12.31',
               style: GoogleFonts.spaceMono(
                 fontSize: 8,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -477,7 +478,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
               'tap a planet',
               style: GoogleFonts.spaceMono(
                 fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withValues(alpha: 0.3),
                 letterSpacing: 2,
               ),
             ),

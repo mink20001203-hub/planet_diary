@@ -60,7 +60,7 @@ Widget _slideUpTransition(
 ) {
   return SlideTransition(
     position: Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: animation,
@@ -69,7 +69,7 @@ Widget _slideUpTransition(
     child: FadeTransition(
       opacity: CurvedAnimation(
         parent: animation,
-        curve: const Interval(0.0, 0.7),
+        curve: const Interval(0.0, 0.8),
       ),
       child: child,
     ),
