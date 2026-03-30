@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +17,7 @@ class SpaceMapScreen extends ConsumerStatefulWidget {
 
 class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     with TickerProviderStateMixin {
-  // 애니메이션 컨트롤러
+  // ?좊땲硫붿씠??而⑦듃濡ㅻ윭
   late final AnimationController _driftController;
   late final Animation<double> _driftY;
 
@@ -26,10 +26,10 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
 
   late final AnimationController _trailController;
 
-  // 느린 공전 애니메이션 (120초)
+  // ?먮┛ 怨듭쟾 ?좊땲硫붿씠??(120珥?
   late final AnimationController _orbitController;
 
-  // 탭 전환 애니메이션
+  // ???꾪솚 ?좊땲硫붿씠??
   late final AnimationController _expandController; 
   late final AnimationController _fadeController; 
   late final Animation<double> _fadeOpacity;
@@ -42,20 +42,20 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
   static const _astronautW = 28.0;
   static const _astronautH = 42.0;
 
-  // 행성 기본 반지름(px)
+  // ?됱꽦 湲곕낯 諛섏?由?px)
   static const _planetRadii = <double>[
-    12, // 수성
-    16, // 금성
-    17, // 지구
-    14, // 화성
-    32, // 목성
-    28, // 토성
-    22, // 천왕성
-    22, // 해왕성
+    12, // ?섏꽦
+    16, // 湲덉꽦
+    17, // 吏援?
+    14, // ?붿꽦
+    32, // 紐⑹꽦
+    28, // ?좎꽦
+    22, // 泥쒖솗??
+    22, // ?댁솗??
   ];
 
   static double _planetFixedAngleRad(int planetIndex) {
-    // 기본 배치 각도
+    // 湲곕낯 諛곗튂 媛곷룄
     return -math.pi / 2 + planetIndex * (math.pi / 4);
   }
 
@@ -109,7 +109,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
       duration: const Duration(seconds: 3),
     )..repeat();
 
-    // 120초 느린 공전
+    // 120珥??먮┛ 怨듭쟾
     _orbitController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 120),
@@ -123,7 +123,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
-      value: 0, // 0에서 시작해야 Tween(1, 0)에 의해 1(완전 불투명)이 됨
+      value: 0, // 0?먯꽌 ?쒖옉?댁빞 Tween(1, 0)???섑빐 1(?꾩쟾 遺덊닾紐?????
     );
     _fadeOpacity = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
@@ -164,7 +164,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     _tappedPlanetIndex = planetIndex;
     _navigateTriggered = false;
 
-    _fadeController.forward(from: 0); // 페이드 아웃 시작
+    _fadeController.forward(from: 0); // ?섏씠???꾩썐 ?쒖옉
     _expandController.forward(from: 0);
     setState(() {});
   }
@@ -277,7 +277,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
     final orbitOffset = _orbitController.value * 2 * math.pi;
     final labelStyle = GoogleFonts.spaceMono(
       fontSize: 8,
-      color: Colors.white.withValues(alpha: 0.4),
+      color: Colors.white.withOpacity(0.4),
     );
 
     final widgets = <Widget>[];
@@ -338,7 +338,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
   }) {
     final planet = kPlanets[planetIndex];
     final r = _planetRadii[planetIndex];
-    // 확장 시에는 타원 궤도를 고려하지 않고 중앙으로 이동하는 느낌 유도를 위해 현재 위치 계산
+    // ?뺤옣 ?쒖뿉?????沅ㅻ룄瑜?怨좊젮?섏? ?딄퀬 以묒븰?쇰줈 ?대룞?섎뒗 ?먮굦 ?좊룄瑜??꾪빐 ?꾩옱 ?꾩튂 怨꾩궛
     final orbitOffset = _orbitController.value * 2 * math.pi;
     final angle = _planetFixedAngleRad(planetIndex) + orbitOffset;
     final planetCenter = Offset(
@@ -351,7 +351,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
         Positioned.fill(
           child: IgnorePointer(
             child: ColoredBox(
-              color: planet.color.withValues(alpha: colorAlpha),
+              color: planet.color.withOpacity(colorAlpha),
             ),
           ),
         ),
@@ -378,7 +378,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: planet.color.withValues(alpha: colorAlpha),
+                          color: planet.color.withOpacity(colorAlpha),
                         ),
                       ),
                     ),
@@ -422,7 +422,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 'MISSION LOG',
                 style: GoogleFonts.spaceMono(
                   fontSize: 9,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                  color: const Color(0xFFFFD246).withOpacity(0.6),
                   letterSpacing: 2.5,
                 ),
               ),
@@ -431,7 +431,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 'DAY ${trip.tripDay} / 365',
                 style: GoogleFonts.spaceMono(
                   fontSize: 20,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -448,15 +448,15 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 '${trip.planet.name.toUpperCase()} SECTOR',
                 style: GoogleFonts.spaceMono(
                   fontSize: 11,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.9),
+                  color: const Color(0xFFFFD246).withOpacity(0.9),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                '체류 ${trip.stayDay}일차 · ${trip.remainDays}일 남음',
+                '泥대쪟 ${trip.stayDay}?쇱감 쨌 ${trip.remainDays}???⑥쓬',
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withOpacity(0.3),
                 ),
               ),
             ],
@@ -474,7 +474,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Colors.white.withOpacity(0.8),
                 ),
               ),
               const SizedBox(height: 4),
@@ -482,7 +482,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                 width: 120,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Colors.white.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(2),
                 ),
                 child: FractionallySizedBox(
@@ -494,7 +494,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
                       borderRadius: BorderRadius.circular(2),
                       boxShadow: [
                         BoxShadow(
-                          color: trip.planet.color.withValues(alpha: 0.4),
+                          color: trip.planet.color.withOpacity(0.4),
                           blurRadius: 4,
                         ),
                       ],
@@ -511,10 +511,10 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
           top: sunBelowTop,
           child: Center(
             child: Text(
-              '2025.01.01 → 2025.12.31',
+              '2025.01.01 ??2025.12.31',
               style: GoogleFonts.spaceMono(
                 fontSize: 8,
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withOpacity(0.3),
               ),
             ),
           ),
@@ -528,7 +528,7 @@ class _SpaceMapScreenState extends ConsumerState<SpaceMapScreen>
               'tap a planet',
               style: GoogleFonts.spaceMono(
                 fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withOpacity(0.3),
                 letterSpacing: 2,
               ),
             ),
@@ -602,11 +602,11 @@ class _SolarSystemPainter extends CustomPainter {
     final shortSide = math.min(size.width, size.height);
     final orbitRadius = shortSide * 0.42;
 
-    // 1. 궤도 타원 그리기
+    // 1. 沅ㅻ룄 ???洹몃━湲?
     final orbitPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8
-      ..color = Colors.white.withValues(alpha: 0.08);
+      ..color = Colors.white.withOpacity(0.08);
     
     canvas.drawOval(
       Rect.fromCenter(
@@ -617,14 +617,14 @@ class _SolarSystemPainter extends CustomPainter {
       orbitPaint,
     );
 
-    // 2. 궤적(Arc) 그리기 (tripDay 기반)
+    // 2. 沅ㅼ쟻(Arc) 洹몃━湲?(tripDay 湲곕컲)
     const day1Angle = -math.pi / 2;
     final sweepAngle = astroAngleRad - day1Angle;
     if (sweepAngle.abs() > 0.01) {
       final trailPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2
-        ..color = Colors.white.withValues(alpha: 0.25);
+        ..color = Colors.white.withOpacity(0.25);
       
       canvas.drawArc(
         Rect.fromCenter(
@@ -639,17 +639,17 @@ class _SolarSystemPainter extends CustomPainter {
       );
     }
 
-    // 3. 렌더링 순서 계산 (Z-sorting: depth 작은 것부터)
+    // 3. ?뚮뜑留??쒖꽌 怨꾩궛 (Z-sorting: depth ?묒? 寃껊???
     final renderList = <_RenderObject>[];
 
-    // 태양 (center, z=0)
+    // ?쒖뼇 (center, z=0)
     renderList.add(_RenderObject(
       z: 0,
       type: _RenderType.sun,
       pos: center,
     ));
 
-    // 행성들
+    // ?됱꽦??
     for (var i = 0; i < 8; i++) {
       final baseAngle = -math.pi / 2 + i * (math.pi / 4);
       final angle = baseAngle + orbitOffsetRad;
@@ -668,7 +668,7 @@ class _SolarSystemPainter extends CustomPainter {
       ));
     }
 
-    // 우주인
+    // ?곗＜??
     final aDepth = math.sin(astroAngleRad);
     final aPos = Offset(
       cx + orbitRadius * math.cos(astroAngleRad),
@@ -680,10 +680,10 @@ class _SolarSystemPainter extends CustomPainter {
       pos: aPos,
     ));
 
-    // 정렬 (뒤 -> 앞)
+    // ?뺣젹 (??-> ??
     renderList.sort((a, b) => a.z.compareTo(b.z));
 
-    // 4. 순서대로 그리기
+    // 4. ?쒖꽌?濡?洹몃━湲?
     for (final obj in renderList) {
       switch (obj.type) {
         case _RenderType.sun:
@@ -706,8 +706,8 @@ class _SolarSystemPainter extends CustomPainter {
         center: Alignment.center,
         radius: 1,
         colors: [
-          Colors.white.withValues(alpha: 0.95),
-          const Color(0xFFF1D18A).withValues(alpha: 0.85),
+          Colors.white.withOpacity(0.95),
+          const Color(0xFFF1D18A).withOpacity(0.85),
           Colors.transparent,
         ],
         stops: const [0.0, 0.6, 1.0],
@@ -719,11 +719,11 @@ class _SolarSystemPainter extends CustomPainter {
     final baseR = planetRadii[index];
     final color = planetColors[index];
     
-    // Depth 기반 스케일 및 투명도
+    // Depth 湲곕컲 ?ㅼ???諛??щ챸??
     final r = baseR * (0.7 + depth * 0.3);
     final opacity = (0.5 + depth * 0.5).clamp(0.4, 1.0);
     
-    // 셰이딩 강화: 앞쪽(Depth > 0)은 밝게, 뒤쪽(Depth < 0)은 어둡게
+    // ?곗씠??媛뺥솕: ?욎そ(Depth > 0)? 諛앷쾶, ?ㅼそ(Depth < 0)? ?대몼寃?
     Color renderColor;
     if (depth > 0) {
       renderColor = Color.lerp(color, Colors.white, depth * 0.3)!;
@@ -743,22 +743,22 @@ class _SolarSystemPainter extends CustomPainter {
         ],
         stops: const [0.0, 0.45, 1.0],
       ).createShader(bounds)
-      ..color = Colors.white.withValues(alpha: opacity);
+      ..color = Colors.white.withOpacity(opacity);
     
     canvas.drawCircle(pos, r, bodyPaint);
 
-    // 토성 고리
+    // ?좎꽦 怨좊━
     if (index == 5) {
       canvas.save();
       canvas.translate(pos.dx, pos.dy);
-      // Depth에 따라 고리의 scaleY 변형 (앞쪽일수록 타원이 커짐)
+      // Depth???곕씪 怨좊━??scaleY 蹂??(?욎そ?쇱닔濡???먯씠 而ㅼ쭚)
       final ringScaleY = 0.25 + (depth + 1.0) * 0.05;
       canvas.scale(1.0, ringScaleY);
       
       final ringPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(1.5, r * 0.08)
-        ..color = const Color(0xFFE8C86A).withValues(alpha: 0.4 * opacity);
+        ..color = const Color(0xFFE8C86A).withOpacity(0.4 * opacity);
       
       final ringW = r * 3.2;
       canvas.drawOval(
@@ -768,18 +768,18 @@ class _SolarSystemPainter extends CustomPainter {
       canvas.restore();
     }
 
-    // 현재 선택된 행성 펄스
+    // ?꾩옱 ?좏깮???됱꽦 ?꾩뒪
     if (index == currentPlanetIndex) {
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0
-        ..color = color.withValues(alpha: currentPlanetPulseOpacity * opacity);
+        ..color = color.withOpacity(currentPlanetPulseOpacity * opacity);
       canvas.drawCircle(pos, r + 5, pulsePaint);
     }
   }
 
   void _drawAstronaut3D(Canvas canvas, Offset pos, double depth) {
-    // 우주인 원근감 적용
+    // ?곗＜???먭렐媛??곸슜
     final scale = 0.6 + depth * 0.4;
     final opacity = (0.6 + depth * 0.4).clamp(0.3, 1.0);
     
@@ -789,7 +789,7 @@ class _SolarSystemPainter extends CustomPainter {
     canvas.save();
     canvas.translate(pos.dx, pos.dy);
     
-    // 광원: 중앙 태양 방향 (depth와 연동)
+    // 愿묒썝: 以묒븰 ?쒖뼇 諛⑺뼢 (depth? ?곕룞)
     final lightAlign = Alignment(0, depth > 0 ? -1 : 1);
 
     final suitPaint = Paint()
@@ -798,26 +798,26 @@ class _SolarSystemPainter extends CustomPainter {
         radius: 1,
         colors: [
           Colors.white,
-          const Color(0xFFECECEC).withValues(alpha: 0.8),
+          const Color(0xFFECECEC).withOpacity(0.8),
         ],
       ).createShader(Rect.fromCenter(center: Offset.zero, width: w, height: h));
 
-    final paintWithAlpha = suitPaint..color = Colors.white.withValues(alpha: opacity);
+    final paintWithAlpha = suitPaint..color = Colors.white.withOpacity(opacity);
 
-    // 헬멧
+    // ?щĸ
     final helmetR = w * 0.22;
     final helmetCenter = Offset(0, -h * 0.12);
     canvas.drawCircle(helmetCenter, helmetR, paintWithAlpha);
 
-    // 바이저
+    // 諛붿씠?
     final visorRect = Rect.fromCenter(
       center: helmetCenter.translate(0, -h * 0.03),
       width: w * 0.42,
       height: h * 0.22,
     );
-    canvas.drawOval(visorRect, Paint()..color = const Color(0xFF1A1000).withValues(alpha: opacity * 0.9));
+    canvas.drawOval(visorRect, Paint()..color = const Color(0xFF1A1000).withOpacity(opacity * 0.9));
 
-    // 몸체
+    // 紐몄껜
     final bodyRect = Rect.fromCenter(center: Offset(0, h * 0.10), width: w * 0.64, height: h * 0.44);
     canvas.drawRRect(RRect.fromRectAndRadius(bodyRect, Radius.circular(w * 0.12)), paintWithAlpha);
 
@@ -860,3 +860,4 @@ class _PlanetBodyPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PlanetBodyPainter oldDelegate) => false;
 }
+

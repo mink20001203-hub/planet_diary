@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -25,14 +25,14 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   final Map<String, Uint8List> _photoBytesCache = {};
 
   static const _moods = <({String emoji, String label})>[
-    (emoji: '😌', label: '고요함'),
-    (emoji: '🤩', label: '경이로움'),
-    (emoji: '😔', label: '외로움'),
-    (emoji: '💪', label: '에너지'),
-    (emoji: '🤔', label: '사색'),
-    (emoji: '😴', label: '피곤함'),
-    (emoji: '😊', label: '행복함'),
-    (emoji: '😨', label: '긴장됨'),
+    (emoji: '😌', label: 'Calm'),
+    (emoji: '🤩', label: 'Excited'),
+    (emoji: '😴', label: 'Tired'),
+    (emoji: '⚡', label: 'Energetic'),
+    (emoji: '🌌', label: 'Mystic'),
+    (emoji: '🧠', label: 'Focused'),
+    (emoji: '😊', label: 'Happy'),
+    (emoji: '😮', label: 'Amazed'),
   ];
 
   @override
@@ -69,7 +69,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           'ANNUAL RECAP',
           style: GoogleFonts.spaceMono(
             fontSize: 13,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Colors.white.withOpacity(0.5),
             letterSpacing: 2,
           ),
         ),
@@ -112,16 +112,16 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           'MISSION COMPLETE',
           style: GoogleFonts.spaceMono(
             fontSize: 12,
-            color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+            color: const Color(0xFFFFD246).withOpacity(0.6),
             letterSpacing: 3,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          '2025 태양계 여행 리포트',
+          '2025 Planet Journey Recap',
           style: GoogleFonts.spaceMono(
             fontSize: 22,
-            color: Colors.white.withValues(alpha: 0.9),
+            color: Colors.white.withOpacity(0.9),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -130,7 +130,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '총 기록 일수',
+              '珥?湲곕줉 ?쇱닔',
               style: GoogleFonts.spaceMono(color: Colors.white54, fontSize: 12),
             ),
             Text(
@@ -148,7 +148,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
+            backgroundColor: Colors.white.withOpacity(0.08),
             valueColor: AlwaysStoppedAnimation<Color>(accentColor),
           ),
         ),
@@ -160,7 +160,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('행성별 기록 통계'),
+        _sectionTitle('?됱꽦蹂?湲곕줉 ?듦퀎'),
         const SizedBox(height: 16),
         ...kPlanets.map((p) {
           final entries = diaryMap.values.where((e) {
@@ -170,7 +170,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
           final recCount = entries.length;
           final progress = (recCount / p.days).clamp(0.0, 1.0);
           
-          // 대표 감정 계산
+          // ???媛먯젙 怨꾩궛
           String topEmoji = '-';
           if (entries.isNotEmpty) {
             final moodCounts = <int, int>{};
@@ -201,7 +201,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(p.name, style: GoogleFonts.spaceMono(fontSize: 13, color: Colors.white70)),
-                          Text('$recCount / ${p.days}일', style: GoogleFonts.spaceMono(fontSize: 11, color: Colors.white38)),
+                          Text('$recCount / ${p.days}d', style: GoogleFonts.spaceMono(fontSize: 11, color: Colors.white38)),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -210,8 +210,8 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 3,
-                          backgroundColor: Colors.white.withValues(alpha: 0.05),
-                          valueColor: AlwaysStoppedAnimation<Color>(p.color.withValues(alpha: 0.6)),
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          valueColor: AlwaysStoppedAnimation<Color>(p.color.withOpacity(0.6)),
                         ),
                       ),
                     ],
@@ -239,7 +239,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('감정 분포'),
+        _sectionTitle('媛먯젙 遺꾪룷'),
         const SizedBox(height: 20),
         SizedBox(
           height: 200,
@@ -275,7 +275,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('퀘스트 통계'),
+        _sectionTitle('?섏뒪???듦퀎'),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -300,9 +300,9 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('전체 퀘스트 달성률', style: GoogleFonts.spaceMono(color: Colors.white70, fontSize: 13)),
+                  Text('Overall Quest Completion', style: GoogleFonts.spaceMono(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 4),
-                  Text('총 $completedQuests 개의 미션 완료', style: GoogleFonts.spaceMono(color: Colors.white38, fontSize: 11)),
+                  Text('$completedQuests missions completed', style: GoogleFonts.spaceMono(color: Colors.white38, fontSize: 11)),
                 ],
               ),
             ),
@@ -323,19 +323,19 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('기억에 남는 순간'),
+        _sectionTitle('湲곗뼲???⑤뒗 ?쒓컙'),
         const SizedBox(height: 16),
         if (recent6.isEmpty)
           Container(
             height: 120,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
+              color: Colors.white.withOpacity(0.03),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
-                '아직 사진 기록이 없습니다.',
+                '?꾩쭅 ?ъ쭊 湲곕줉???놁뒿?덈떎.',
                 style: GoogleFonts.spaceMono(color: Colors.white24, fontSize: 12),
               ),
             ),
@@ -402,7 +402,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
   }
 
   Widget _buildSummary(int recorded, Map<int, DiaryEntry> diaryMap) {
-    String topPlanet = '목성';
+    String topPlanet = '紐⑹꽦';
     if (diaryMap.isNotEmpty) {
       final pCounts = <String, int>{};
       for (final e in diaryMap.values) {
@@ -420,11 +420,11 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _fadingText('당신은 $recorded일 동안 우주를 여행했습니다.', 0),
+        _fadingText('?뱀떊? $recorded???숈븞 ?곗＜瑜??ы뻾?덉뒿?덈떎.', 0),
         const SizedBox(height: 12),
-        _fadingText('가장 오래 머문 행성은 $topPlanet이었어요.', 1),
+        _fadingText('媛???ㅻ옒 癒몃Ц ?됱꽦? $topPlanet?댁뿀?댁슂.', 1),
         const SizedBox(height: 12),
-        _fadingText('총 $totalQ개의 퀘스트를 완료했습니다.', 2),
+        _fadingText('珥?$totalQ媛쒖쓽 ?섏뒪?몃? ?꾨즺?덉뒿?덈떎.', 2),
       ],
     );
   }
@@ -452,7 +452,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
         text,
         style: GoogleFonts.spaceMono(
           fontSize: 15,
-          color: Colors.white.withValues(alpha: 0.8),
+          color: Colors.white.withOpacity(0.8),
           height: 1.5,
         ),
       ),
@@ -464,7 +464,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
       title,
       style: GoogleFonts.spaceMono(
         fontSize: 10,
-        color: Colors.white.withValues(alpha: 0.3),
+        color: Colors.white.withOpacity(0.3),
         letterSpacing: 2,
       ),
     );
@@ -490,10 +490,10 @@ class _MoodBarPainter extends CustomPainter {
       final isMax = maxVal > 0 && val == maxVal;
 
       final paint = Paint()
-        ..color = isMax ? const Color(0xFFFFD246) : Colors.white.withValues(alpha: 0.15)
+        ..color = isMax ? const Color(0xFFFFD246) : Colors.white.withOpacity(0.15)
         ..style = PaintingStyle.fill;
 
-      // 바 그리기
+      // 諛?洹몃━湲?
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(40, y, barWidth.toDouble(), barHeight),
@@ -502,14 +502,14 @@ class _MoodBarPainter extends CustomPainter {
         paint,
       );
 
-      // 이모지 텍스트 페인터 (간략화)
+      // ?대え吏 ?띿뒪???섏씤??(媛꾨왂??
       final tp = TextPainter(
         text: TextSpan(text: moods[i].emoji, style: const TextStyle(fontSize: 14)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(10, y - 2));
 
-      // 수치
+      // ?섏튂
       final valTp = TextPainter(
         text: TextSpan(
           text: '$val',
@@ -536,7 +536,7 @@ class _CircleChartPainter extends CustomPainter {
     const strokeWidth = 6.0;
 
     final bgPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
+      ..color = Colors.white.withOpacity(0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -559,3 +559,4 @@ class _CircleChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

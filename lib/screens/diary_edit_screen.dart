@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -14,7 +14,7 @@ import '../providers/quest_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/xp_provider.dart';
 
-/// tripDay 기준 일기 편집 (Hive는 diaryProvider.save로 연결)
+/// tripDay 湲곗? ?쇨린 ?몄쭛 (Hive??diaryProvider.save濡??곌껐)
 class DiaryEditScreen extends ConsumerStatefulWidget {
   const DiaryEditScreen({super.key, required this.tripDay});
 
@@ -29,7 +29,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   static const _panelBg = Color(0xFF0E1420);
   static const _moodCardBg = Color(0xFF0A1018);
 
-  // XP 애니메이션
+  // XP ?좊땲硫붿씠??
   late final AnimationController _xpAnimController;
   late final Animation<double> _xpOpacity;
   late final Animation<Offset> _xpOffset;
@@ -58,14 +58,14 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   ];
 
   static const _moods = <({String emoji, String label})>[
-    (emoji: '😌', label: '고요함'),
-    (emoji: '🤩', label: '경이로움'),
-    (emoji: '😔', label: '외로움'),
-    (emoji: '💪', label: '에너지'),
-    (emoji: '🤔', label: '사색'),
-    (emoji: '😴', label: '피곤함'),
-    (emoji: '😊', label: '행복함'),
-    (emoji: '😨', label: '긴장됨'),
+    (emoji: '😌', label: 'Calm'),
+    (emoji: '🤩', label: 'Excited'),
+    (emoji: '😴', label: 'Tired'),
+    (emoji: '⚡', label: 'Energetic'),
+    (emoji: '🌌', label: 'Mystic'),
+    (emoji: '🧠', label: 'Focused'),
+    (emoji: '😊', label: 'Happy'),
+    (emoji: '😮', label: 'Amazed'),
   ];
 
   late final TextEditingController _textController;
@@ -81,7 +81,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   String get _dateHeaderLine {
     final d = _dateForTrip;
     final m = _monthAbbr[d.month - 1];
-    return '${d.year} · $m · ${d.day.toString().padLeft(2, '0')}';
+    return '${d.year} 쨌 $m 쨌 ${d.day.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -104,7 +104,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
       end: const Offset(0, -0.5),
     ).animate(CurvedAnimation(parent: _xpAnimController, curve: Curves.easeOut));
     
-    // initState에서 데이터 초기화
+    // initState?먯꽌 ?곗씠??珥덇린??
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _hydrateFromDiary();
     });
@@ -128,7 +128,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
         ..addAll(entry.photoPaths);
       ref.read(questProvider.notifier).setForDay(widget.tripDay, entry.questDone);
     } else {
-      // 신규 일기면 퀘스트 상태 초기화
+      // ?좉퇋 ?쇨린硫??섏뒪???곹깭 珥덇린??
       ref
           .read(questProvider.notifier)
           .setForDay(widget.tripDay, [false, false, false]);
@@ -152,12 +152,12 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     final messenger = ScaffoldMessenger.of(context);
     await ref.read(diaryProvider.notifier).save(entry);
 
-    // XP 정산
+    // XP ?뺤궛
     int totalEarned = 0;
-    totalEarned += 10; // 일기 작성
-    if (_photoPaths.isNotEmpty) totalEarned += 5; // 사진
+    totalEarned += 10; // ?쇨린 ?묒꽦
+    if (_photoPaths.isNotEmpty) totalEarned += 5; // ?ъ쭊
     final doneCount = quests.where((q) => q).length;
-    totalEarned += (doneCount * 15); // 퀘스트
+    totalEarned += (doneCount * 15); // ?섏뒪??
 
     final leveledUp = ref.read(xpProvider.notifier).addXp(totalEarned);
     ref.read(xpProvider.notifier).checkStreak(widget.tripDay);
@@ -178,7 +178,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           backgroundColor: const Color(0xFF1a1a1a),
           behavior: SnackBarBehavior.floating,
           content: Text(
-            'DAY ${widget.tripDay} 기록 완료 (+$totalEarned XP)',
+            'DAY ${widget.tripDay} 湲곕줉 ?꾨즺 (+$totalEarned XP)',
             style: GoogleFonts.spaceMono(
               color: const Color(0xFFFFD246),
               fontSize: 13,
@@ -193,7 +193,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           backgroundColor: const Color(0xFF1a1a1a),
           behavior: SnackBarBehavior.floating,
           content: Text(
-            '임시 저장되었습니다.',
+            '?꾩떆 ??λ릺?덉뒿?덈떎.',
             style: GoogleFonts.spaceMono(
               color: Colors.white70,
               fontSize: 12,
@@ -263,8 +263,8 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     final questDefs = _questsForPlanet(planet.name);
     final doneCount = quests.where((e) => e).length;
 
-    final borderIdle = Colors.white.withValues(alpha: 0.15);
-    final borderFocus = Colors.white.withValues(alpha: 0.3);
+    final borderIdle = Colors.white.withOpacity(0.15);
+    final borderFocus = Colors.white.withOpacity(0.3);
 
     return Scaffold(
       backgroundColor: const Color(0xFF020408),
@@ -300,16 +300,16 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                             style: GoogleFonts.spaceMono(
                               fontSize: 14,
                               height: 1.75,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                             ),
                             cursorColor: const Color(0xFFFFD246),
                             decoration: InputDecoration(
                               counterText: '',
                               filled: true,
                               fillColor: const Color(0xFF0E1420),
-                              hintText: '${planet.name}에서의 오늘을 기록하세요...',
+                              hintText: '${planet.name}?먯꽌???ㅻ뒛??湲곕줉?섏꽭??..',
                               hintStyle: GoogleFonts.spaceMono(
-                                color: Colors.white.withValues(alpha: 0.3),
+                                color: Colors.white.withOpacity(0.3),
                                 height: 1.75,
                               ),
                               contentPadding: EdgeInsets.all(14),
@@ -334,7 +334,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                               '${_textController.text.characters.length} / 500',
                               style: GoogleFonts.spaceMono(
                                 fontSize: 9,
-                                color: Colors.white.withValues(alpha: 0.3),
+                                color: Colors.white.withOpacity(0.3),
                               ),
                             ),
                           ),
@@ -342,10 +342,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        '사진 기록',
+                        '?ъ쭊 湲곕줉',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Colors.white.withOpacity(0.3),
                           letterSpacing: 2,
                         ),
                       ),
@@ -371,10 +371,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        '오늘의 퀘스트',
+                        'TODAY QUESTS',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Colors.white.withOpacity(0.3),
                           letterSpacing: 2,
                         ),
                       ),
@@ -394,7 +394,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                               style: OutlinedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(vertical: 14),
                                 side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.white.withOpacity(0.2),
                                 ),
                                 backgroundColor: const Color(0xFF0E1420),
                                 shape: RoundedRectangleBorder(
@@ -402,10 +402,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                 ),
                               ),
                               child: Text(
-                                '임시저장',
+                                'Save Draft',
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.9),
+                                  color: Colors.white.withOpacity(0.9),
                                 ),
                               ),
                             ),
@@ -417,18 +417,18 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                               style: OutlinedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(vertical: 14),
                                 side: BorderSide(
-                                  color: const Color(0xFFFFD246).withValues(alpha: 0.5),
+                                  color: const Color(0xFFFFD246).withOpacity(0.5),
                                 ),
-                                backgroundColor: const Color(0xFFFFD246).withValues(alpha: 0.15),
+                                backgroundColor: const Color(0xFFFFD246).withOpacity(0.15),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
                               child: Text(
-                                '기록 완료 →',
+                                'Complete',
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 12,
-                                  color: const Color(0xFFFFD246).withValues(alpha: 0.9),
+                                  color: const Color(0xFFFFD246).withOpacity(0.9),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -501,10 +501,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
         InkWell(
           onTap: () => context.pop(),
           child: Text(
-            '← CALENDAR',
+            '??CALENDAR',
             style: GoogleFonts.spaceMono(
               fontSize: 11,
-              color: Colors.white.withValues(alpha: 0.35),
+              color: Colors.white.withOpacity(0.35),
               letterSpacing: 0.5,
             ),
           ),
@@ -516,7 +516,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                 _dateHeaderLine,
                 style: GoogleFonts.spaceMono(
                   fontSize: 11,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                  color: const Color(0xFFFFD246).withOpacity(0.6),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -525,7 +525,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                 'DAY ${widget.tripDay}',
                 style: GoogleFonts.spaceMono(
                   fontSize: 18,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -537,10 +537,10 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
             await _saveToHive(popAfter: true);
           },
           child: Text(
-            'SAVE ↑',
+            'SAVE',
             style: GoogleFonts.spaceMono(
               fontSize: 11,
-              color: const Color(0xFFFFD246).withValues(alpha: 0.7),
+              color: const Color(0xFFFFD246).withOpacity(0.7),
               letterSpacing: 0.5,
             ),
           ),
@@ -555,7 +555,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
       decoration: BoxDecoration(
         color: _panelBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: planet.color.withValues(alpha: 0.3)),
+        border: Border.all(color: planet.color.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -567,7 +567,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
               color: planet.color,
               boxShadow: [
                 BoxShadow(
-                  color: planet.color.withValues(alpha: 0.35),
+                  color: planet.color.withOpacity(0.35),
                   blurRadius: 6,
                 ),
               ],
@@ -582,16 +582,16 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                   '${planet.name.toUpperCase()} SECTOR',
                   style: GoogleFonts.spaceMono(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.88),
+                    color: Colors.white.withOpacity(0.88),
                     letterSpacing: 0.6,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '체류 $stayDay일차 · $remain일 남음',
+                  '泥대쪟 $stayDay?쇱감 쨌 $remain???⑥쓬',
                   style: GoogleFonts.spaceMono(
                     fontSize: 10,
-                    color: Colors.white.withValues(alpha: 0.35),
+                    color: Colors.white.withOpacity(0.35),
                   ),
                 ),
               ],
@@ -601,7 +601,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
             'D+${widget.tripDay}',
             style: GoogleFonts.spaceMono(
               fontSize: 11,
-              color: const Color(0xFFFFD246).withValues(alpha: 0.65),
+              color: const Color(0xFFFFD246).withOpacity(0.65),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -617,17 +617,17 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
         color: _moodCardBg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: Colors.white.withOpacity(0.06),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '오늘의 감정',
+            '?ㅻ뒛??媛먯젙',
             style: GoogleFonts.spaceMono(
               fontSize: 9,
-              color: Colors.white.withValues(alpha: 0.25),
+              color: Colors.white.withOpacity(0.25),
               letterSpacing: 2,
             ),
           ),
@@ -653,20 +653,20 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                       ),
                       decoration: BoxDecoration(
                         color: sel
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.white.withValues(alpha: 0.04),
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.white.withOpacity(0.04),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: sel
-                              ? Colors.white.withValues(alpha: 0.25)
-                              : Colors.white.withValues(alpha: 0.08),
+                              ? Colors.white.withOpacity(0.25)
+                              : Colors.white.withOpacity(0.08),
                         ),
                       ),
                       child: Text(
                         '${m.emoji}${m.label}',
                         style: GoogleFonts.spaceMono(
                           fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: Colors.white.withOpacity(0.85),
                         ),
                       ),
                     ),
@@ -692,7 +692,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
       decoration: BoxDecoration(
         color: _panelBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,7 +702,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
             padding: EdgeInsets.fromLTRB(14, 12, 14, 10),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: pc.withValues(alpha: 0.2)),
+                bottom: BorderSide(color: pc.withOpacity(0.2)),
               ),
             ),
             child: Row(
@@ -712,15 +712,15 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                   mission,
                   style: GoogleFonts.spaceMono(
                     fontSize: 11,
-                    color: const Color(0xFFFFD246).withValues(alpha: 0.85),
+                    color: const Color(0xFFFFD246).withOpacity(0.85),
                     letterSpacing: 1,
                   ),
                 ),
                 Text(
-                  '$doneCount/3 완료',
+                  '$doneCount/3 ?꾨즺',
                   style: GoogleFonts.spaceMono(
                     fontSize: 10,
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: Colors.white.withOpacity(0.45),
                   ),
                 ),
               ],
@@ -749,7 +749,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: done ? pc.withValues(alpha: 0.08) : null,
+                          color: done ? pc.withOpacity(0.08) : null,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -763,12 +763,12 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(4),
                                   color: done
-                                      ? pc.withValues(alpha: 0.2)
+                                      ? pc.withOpacity(0.2)
                                       : null,
                                   border: Border.all(
                                     color: done
-                                        ? pc.withValues(alpha: 0.55)
-                                        : Colors.white.withValues(alpha: 0.2),
+                                        ? pc.withOpacity(0.55)
+                                        : Colors.white.withOpacity(0.2),
                                     width: 1.2,
                                   ),
                                 ),
@@ -776,7 +776,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                     ? Icon(
                                         Icons.check,
                                         size: 12,
-                                        color: pc.withValues(alpha: 0.95),
+                                        color: pc.withOpacity(0.95),
                                       )
                                     : null,
                               ),
@@ -788,14 +788,14 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 11,
                                   height: 1.35,
-                                  color: Colors.white.withValues(
-                                    alpha: done ? 0.35 : 0.82,
+                                  color: Colors.white.withOpacity(
+                                    done ? 0.35 : 0.82,
                                   ),
                                   decoration: done
                                       ? TextDecoration.lineThrough
                                       : null,
                                   decorationColor:
-                                      Colors.white.withValues(alpha: 0.35),
+                                      Colors.white.withOpacity(0.35),
                                 ),
                               ),
                             ),
@@ -808,8 +808,8 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
                                   color: done
-                                      ? pc.withValues(alpha: 0.5)
-                                      : Colors.white.withValues(alpha: 0.12),
+                                      ? pc.withOpacity(0.5)
+                                      : Colors.white.withOpacity(0.12),
                                 ),
                               ),
                               child: Text(
@@ -817,8 +817,8 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                                 style: GoogleFonts.spaceMono(
                                   fontSize: 9,
                                   color: done
-                                      ? pc.withValues(alpha: 0.95)
-                                      : Colors.white.withValues(alpha: 0.28),
+                                      ? pc.withOpacity(0.95)
+                                      : Colors.white.withOpacity(0.28),
                                 ),
                               ),
                             ),
@@ -849,13 +849,13 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
             ),
             color: _panelBg,
           ),
           child: Icon(
             Icons.add,
-            color: Colors.white.withValues(alpha: 0.45),
+            color: Colors.white.withOpacity(0.45),
             size: 28,
           ),
         ),
@@ -887,7 +887,7 @@ class _PhotoThumb extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               color: const Color(0xFF0E1420),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              border: Border.all(color: Colors.white.withOpacity(0.15)),
             ),
             child: kIsWeb
                 ? Image.network(
@@ -981,48 +981,60 @@ class _DiaryStarfieldPainter extends CustomPainter {
   bool shouldRepaint(covariant _DiaryStarfieldPainter oldDelegate) => false;
 }
 
-List<({String title, int xp})> _questsForPlanet(String nameKr) {
+List<({String title, int xp})> _questsForPlanet(String planetNameKr) {
+  const fallback = <({String title, int xp})>[
+    (title: 'Record one clear moment from today', xp: 15),
+    (title: 'Try one small challenge and note it', xp: 20),
+    (title: 'Write one thing to do tomorrow', xp: 25),
+  ];
+
   const data = <String, List<({String title, int xp})>>{
-    '수성': [
-      (title: '속도: 오늘 가장 빠르게 느낀 순간 적기', xp: 15),
-      (title: '변화: 작은 전환을 한 가지 시도하기', xp: 20),
-      (title: '변화: 그 결과를 한 줄로 기록', xp: 25),
+    'Mercury': [
+      (title: 'Move fast: finish one small task quickly', xp: 15),
+      (title: 'Switch context once and recover focus', xp: 20),
+      (title: 'Log what improved after the switch', xp: 25),
     ],
-    '금성': [
-      (title: '아름다움: 오늘 본 아름다운 것 한 가지', xp: 15),
-      (title: '관계: 누군가에게 건넨 말 한마디', xp: 20),
-      (title: '관계: 고마웠던 순간 메모', xp: 25),
+    'Venus': [
+      (title: 'Find one beautiful detail from today', xp: 15),
+      (title: 'Send one warm message to someone', xp: 20),
+      (title: 'Write one gratitude note', xp: 25),
     ],
-    '지구': [
-      (title: '자연: 창밖·산책에서 느낀 자연 한 조각', xp: 15),
-      (title: '일상: 오늘의 루틴 중 편안했던 것', xp: 20),
-      (title: '일상: 소소한 기쁨 한 줄', xp: 25),
+    'Earth': [
+      (title: 'Notice one natural sound or light', xp: 15),
+      (title: 'Keep one healthy routine today', xp: 20),
+      (title: 'Write one grounding sentence', xp: 25),
     ],
-    '화성': [
-      (title: '도전: 오늘의 도전 과제 정의하기', xp: 15),
-      (title: '에너지: 힘을 낸 순간 기록', xp: 20),
-      (title: '에너지: 다음 행동 한 가지', xp: 25),
+    'Mars': [
+      (title: 'Define one bold action for today', xp: 15),
+      (title: 'Finish one task with strong focus', xp: 20),
+      (title: 'Review one lesson from the action', xp: 25),
     ],
-    '목성': [
-      (title: '성장: 오늘 배운 것 한 가지', xp: 15),
-      (title: '탐구: 궁금해진 질문 적기', xp: 20),
-      (title: '탐구: 스스로 찾아본 내용 메모', xp: 25),
+    'Jupiter': [
+      (title: 'Learn one new thing today', xp: 15),
+      (title: 'Ask one better question', xp: 20),
+      (title: 'Write one expansion idea', xp: 25),
     ],
-    '토성': [
-      (title: '인내: 기다림이 필요했던 순간', xp: 15),
-      (title: '규율: 지킨 약속·룰 한 가지', xp: 20),
-      (title: '규율: 내일 지킬 한 가지', xp: 25),
+    'Saturn': [
+      (title: 'Keep one promise to yourself', xp: 15),
+      (title: 'Do one routine with consistency', xp: 20),
+      (title: 'Plan one realistic next step', xp: 25),
     ],
-    '천왕성': [
-      (title: '창의: 떠올린 아이디어 스케치', xp: 15),
-      (title: '혁신: 평소와 다른 시도', xp: 20),
-      (title: '혁신: 남기고 싶은 인사이트', xp: 25),
+    'Uranus': [
+      (title: 'Try one unconventional idea', xp: 15),
+      (title: 'Break one stale pattern safely', xp: 20),
+      (title: 'Capture one insight from surprise', xp: 25),
     ],
-    '해왕성': [
-      (title: '감성: 오늘의 기분을 색으로 표현', xp: 15),
-      (title: '꿈: 떠오른 장면·이미지', xp: 20),
-      (title: '꿈: 마음에 남은 감정 한 줄', xp: 25),
+    'Neptune': [
+      (title: 'Describe one feeling with precision', xp: 15),
+      (title: 'Write one dream-like image', xp: 20),
+      (title: 'Summarize your emotional tone', xp: 25),
     ],
   };
-  return data[nameKr] ?? data['지구']!;
+
+  final planet = kPlanets.firstWhere(
+    (p) => p.name == planetNameKr,
+    orElse: () => kPlanets[2],
+  );
+  return data[planet.en] ?? fallback;
 }
+

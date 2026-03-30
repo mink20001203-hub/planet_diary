@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +11,8 @@ import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/xp_provider.dart';
 
-/// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화만으로 처리하고
-/// 아래 mock 맵은 제거하세요.
+/// TODO(Hive): ?쇨린/?ъ쭊/?섏뒪??吏묎퀎瑜?diaryProvider + Hive ?숆린?붾쭔?쇰줈 泥섎━?섍퀬
+/// ?꾨옒 mock 留듭? ?쒓굅?섏꽭??
 
 class _DayMeta {
   const _DayMeta({
@@ -83,7 +83,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     'SUN',
   ];
 
-  /// TableCalendar 범위 (고정)
+  /// TableCalendar 踰붿쐞 (怨좎젙)
   static final _firstDay = DateTime(2025, 1, 1);
   static final _lastDay = DateTime(2025, 12, 31);
 
@@ -94,21 +94,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    // 초기화: 오늘 날짜(매핑된 2025년 날짜)로 포커스 및 선택
+    // 珥덇린?? ?ㅻ뒛 ?좎쭨(留ㅽ븨??2025???좎쭨)濡??ъ빱??諛??좏깮
     final trip = ref.read(tripProvider);
     _focusedDay = _clampToTripCalendar(trip.today);
     _selectedDay = _focusedDay;
     _initialized = true;
   }
 
-  /// [firstDay, lastDay] 밖의 날짜를 clamp (assertion: focusedDay ≤ lastDay)
+  /// [firstDay, lastDay] 諛뽰쓽 ?좎쭨瑜?clamp (assertion: focusedDay ??lastDay)
   DateTime _clampToTripCalendar(DateTime d) {
     if (d.isBefore(_firstDay)) return _firstDay;
     if (d.isAfter(_lastDay)) return _lastDay;
     return d;
   }
 
-  /// 오늘이 lastDay 이후면 lastDay, 이전이면 오늘 (2025 이전이면 firstDay)
+  /// ?ㅻ뒛??lastDay ?댄썑硫?lastDay, ?댁쟾?대㈃ ?ㅻ뒛 (2025 ?댁쟾?대㈃ firstDay)
   DateTime _safeFocusedDayFromToday() {
     final today = ref.read(tripProvider).today;
     if (today.isAfter(_lastDay)) return _lastDay;
@@ -123,11 +123,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   _DayMeta _effectiveMeta(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null) {
-      // 노란색 = questDone 중 하나라도 true
+      // ?몃???= questDone 以??섎굹?쇰룄 true
       final anyQuest = e.questDone.any((bool x) => x);
       return _DayMeta(
-        hasDiary: true, // 흰색 = 해당 tripDay에 DiaryEntry 존재
-        hasPhoto: e.photoPaths.isNotEmpty, // 파란색 = photoPaths 비어있지 않음
+        hasDiary: true, // ?곗깋 = ?대떦 tripDay??DiaryEntry 議댁옱
+        hasPhoto: e.photoPaths.isNotEmpty, // ?뚮???= photoPaths 鍮꾩뼱?덉? ?딆쓬
         questClear: anyQuest,
       );
     }
@@ -136,7 +136,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   String _formatHudDate(DateTime d) {
     final m = _monthAbbr[d.month - 1];
-    return '${d.year} · $m · ${d.day.toString().padLeft(2, '0')}';
+    return '${d.year} 쨌 $m 쨌 ${d.day.toString().padLeft(2, '0')}';
   }
 
   String _weekdayShort(DateTime d) {
@@ -169,9 +169,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String? _previewText(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null && e.text.trim().isNotEmpty) {
-      // 선택한 날짜의 DiaryEntry 있으면 text 첫 줄 표시
+      // ?좏깮???좎쭨??DiaryEntry ?덉쑝硫?text 泥?以??쒖떆
       final firstLine = e.text.trim().split('\n').first;
-      return firstLine.length > 80 ? '${firstLine.substring(0, 80)}…' : firstLine;
+      return firstLine.length > 80 ? '${firstLine.substring(0, 80)}...' : firstLine;
     }
     return null;
   }
@@ -188,7 +188,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       _selectedDay = safe;
     }
 
-    // 데이터 로딩 체크 (초기화 전이면 로딩 표시)
+    // ?곗씠??濡쒕뵫 泥댄겕 (珥덇린???꾩씠硫?濡쒕뵫 ?쒖떆)
     if (!_initialized) {
       return Scaffold(
         backgroundColor: const Color(0xFF020408),
@@ -212,12 +212,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     final stats = _stats(diaryMap);
     final headerTextStyle = GoogleFonts.spaceMono(
-      color: Colors.white.withValues(alpha: 0.6),
+      color: Colors.white.withOpacity(0.6),
       fontSize: 15,
       fontWeight: FontWeight.w500,
     );
     final dowStyle = GoogleFonts.spaceMono(
-      color: Colors.white.withValues(alpha: 0.3),
+      color: Colors.white.withOpacity(0.3),
       fontSize: 9,
     );
 
@@ -248,7 +248,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           color: const Color(0xFF0E1420),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: Colors.white.withOpacity(0.08),
                             width: 1,
                           ),
                         ),
@@ -294,14 +294,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                         ),
                       ),
                       child: Text(
-                        'MAP ↑',
+                        'MAP',
                         style: GoogleFonts.spaceMono(
                           fontSize: 9,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Colors.white.withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -311,7 +311,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     'TODAY',
                     style: GoogleFonts.spaceMono(
                       fontSize: 10,
-                      color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                      color: const Color(0xFFFFD246).withOpacity(0.6),
                       letterSpacing: 2,
                     ),
                   ),
@@ -322,7 +322,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 _formatHudDate(trip.today),
                 style: GoogleFonts.spaceMono(
                   fontSize: 24,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                   height: 1.15,
                 ),
@@ -332,7 +332,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 _weekdayShort(trip.today),
                 style: GoogleFonts.spaceMono(
                   fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withOpacity(0.3),
                   letterSpacing: 1,
                 ),
               ),
@@ -350,7 +350,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     'MISSION LOG',
                     style: GoogleFonts.spaceMono(
                       fontSize: 10,
-                      color: const Color(0xFFFFD246).withValues(alpha: 0.6),
+                      color: const Color(0xFFFFD246).withOpacity(0.6),
                       letterSpacing: 2,
                     ),
                   ),
@@ -361,7 +361,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFFD246).withValues(alpha: 0.3)),
+                        border: Border.all(color: const Color(0xFFFFD246).withOpacity(0.3)),
                       ),
                       child: const Icon(
                         Icons.analytics_outlined,
@@ -377,7 +377,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 'DAY ${trip.tripDay.toString().padLeft(3, '0')} / 365',
                 style: GoogleFonts.spaceMono(
                   fontSize: 20,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -386,16 +386,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 '${trip.planet.name.toUpperCase()} SECTOR',
                 style: GoogleFonts.spaceMono(
                   fontSize: 12,
-                  color: const Color(0xFFFFD246).withValues(alpha: 0.8),
+                  color: const Color(0xFFFFD246).withOpacity(0.8),
                   letterSpacing: 0.8,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                '체류 ${trip.stayDay}일차 · ${trip.remainDays}일 남음',
+                '泥대쪟 ${trip.stayDay}?쇱감 쨌 ${trip.remainDays}???⑥쓬',
                 style: GoogleFonts.spaceMono(
                   fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withOpacity(0.3),
                 ),
               ),
             ],
@@ -428,13 +428,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: current
-                          ? Colors.white.withValues(alpha: 0.09)
+                          ? Colors.white.withOpacity(0.09)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: current
-                            ? Colors.white.withValues(alpha: 0.14)
-                            : Colors.white.withValues(alpha: 0.06),
+                            ? Colors.white.withOpacity(0.14)
+                            : Colors.white.withOpacity(0.06),
                         width: 1,
                       ),
                     ),
@@ -449,7 +449,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             color: p.color,
                             boxShadow: [
                               BoxShadow(
-                                color: p.color.withValues(alpha: 0.35),
+                                color: p.color.withOpacity(0.35),
                                 blurRadius: 8,
                               ),
                             ],
@@ -460,17 +460,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           p.name,
                           style: GoogleFonts.spaceMono(
                             fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: Colors.white.withOpacity(0.85),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${p.days}일 체류',
+                          '${p.days}??泥대쪟',
                           style: GoogleFonts.spaceMono(
                             fontSize: 9,
-                            color: Colors.white.withValues(alpha: 0.35),
+                            color: Colors.white.withOpacity(0.35),
                           ),
                         ),
                       ],
@@ -522,12 +522,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           titleTextStyle: headerTextStyle,
           leftChevronIcon: Icon(
             Icons.chevron_left,
-            color: Colors.white.withValues(alpha: 0.45),
+            color: Colors.white.withOpacity(0.45),
             size: 26,
           ),
           rightChevronIcon: Icon(
             Icons.chevron_right,
-            color: Colors.white.withValues(alpha: 0.45),
+            color: Colors.white.withOpacity(0.45),
             size: 26,
           ),
         ),
@@ -610,7 +610,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       '${day.day}',
                       style: GoogleFonts.spaceMono(
                         fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withOpacity(0.85),
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),
@@ -641,7 +641,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             height: 1.5,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: planet.color.withValues(alpha: 0.7),
+              color: planet.color.withOpacity(0.7),
               borderRadius: BorderRadius.circular(1),
             ),
           ),
@@ -672,7 +672,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       height: 4,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: on ? color : color.withValues(alpha: 0.12),
+        color: on ? color : color.withOpacity(0.12),
       ),
     );
   }
@@ -725,7 +725,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               _formatHudDate(sel),
                               style: GoogleFonts.spaceMono(
                                 fontSize: 14,
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: Colors.white.withOpacity(0.9),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -734,7 +734,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             'DAY $tripDay',
                             style: GoogleFonts.spaceMono(
                               fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.55),
+                              color: Colors.white.withOpacity(0.55),
                             ),
                           ),
                         ],
@@ -755,7 +755,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             planet.name,
                             style: GoogleFonts.spaceMono(
                               fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                             ),
                           ),
                         ],
@@ -763,7 +763,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       const SizedBox(height: 8),
                       Expanded(
                         child: Text(
-                          preview ?? '아직 기록이 없는 날이에요.',
+                          preview ?? '?꾩쭅 湲곕줉???녿뒗 ?좎씠?먯슂.',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.spaceMono(
@@ -773,19 +773,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 ? FontStyle.italic
                                 : FontStyle.normal,
                             color: preview == null
-                                ? Colors.white.withValues(alpha: 0.2)
-                                : Colors.white.withValues(alpha: 0.9),
+                                ? Colors.white.withOpacity(0.2)
+                                : Colors.white.withOpacity(0.9),
                           ),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          _badge('일기', meta.hasDiary),
+                          _badge('?쇨린', meta.hasDiary),
                           const SizedBox(width: 8),
-                          _badge('사진', meta.hasPhoto),
+                          _badge('?ъ쭊', meta.hasPhoto),
                           const SizedBox(width: 8),
-                          _badge('퀘스트', meta.questClear),
+                          _badge('QUEST', meta.questClear),
                         ],
                       ),
                     ],
@@ -804,14 +804,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: done ? amber.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.12),
+          color: done ? amber.withOpacity(0.85) : Colors.white.withOpacity(0.12),
         ),
       ),
       child: Text(
         label,
         style: GoogleFonts.spaceMono(
           fontSize: 9,
-          color: done ? amber.withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.25),
+          color: done ? amber.withOpacity(0.95) : Colors.white.withOpacity(0.25),
         ),
       ),
     );
@@ -826,10 +826,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.035),
+            color: Colors.white.withOpacity(0.035),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.07),
+              color: Colors.white.withOpacity(0.07),
             ),
           ),
           child: Column(
@@ -839,7 +839,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 textAlign: TextAlign.center,
                 style: GoogleFonts.spaceMono(
                   fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.35),
+                  color: Colors.white.withOpacity(0.35),
                   height: 1.2,
                 ),
               ),
@@ -848,7 +848,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 value,
                 style: GoogleFonts.spaceMono(
                   fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -864,11 +864,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       children: [
         Row(
           children: [
-            cell('기록완료일수', '${stats.recorded}'),
+            cell('湲곕줉?꾨즺?쇱닔', '${stats.recorded}'),
             const SizedBox(width: 8),
-            cell('퀘스트클리어수', '${stats.questsCleared}'),
+            cell('Quest Cleared', '${stats.questsCleared}'),
             const SizedBox(width: 8),
-            cell('현재행성 남은일', '${trip.remainDays}'),
+            cell('Days Left', '${trip.remainDays}'),
           ],
         ),
         if (xpState.streak > 0) ...[
@@ -876,19 +876,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFD246).withValues(alpha: 0.08),
+              color: const Color(0xFFFFD246).withOpacity(0.08),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: const Color(0xFFFFD246).withValues(alpha: 0.2),
+                color: const Color(0xFFFFD246).withOpacity(0.2),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('🔥', style: TextStyle(fontSize: 14)),
+                const Text('?뵦', style: TextStyle(fontSize: 14)),
                 const SizedBox(width: 8),
                 Text(
-                  '${xpState.streak}일 연속 기록 중',
+                  '${xpState.streak} day streak',
                   style: GoogleFonts.spaceMono(
                     fontSize: 12,
                     color: const Color(0xFFFFD246),
@@ -947,3 +947,4 @@ class _CalendarStarfieldPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CalendarStarfieldPainter oldDelegate) => false;
 }
+
