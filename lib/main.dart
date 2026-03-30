@@ -7,10 +7,23 @@ import 'router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  Hive.registerAdapter(DiaryEntryAdapter());
-  await Hive.openBox<DiaryEntry>('diary');
-  runApp(const ProviderScope(child: PlanetDiaryApp()));
+  debugPrint('--- APP STARTING ---');
+  
+  try {
+    debugPrint('Initializing Hive...');
+    await Hive.initFlutter();
+    
+    debugPrint('Registering Adapter...');
+    Hive.registerAdapter(DiaryEntryAdapter());
+    
+    debugPrint('Opening Diary Box...');
+    await Hive.openBox<DiaryEntry>('diary');
+    
+    debugPrint('--- HIVE READY, STARTING UI ---');
+    runApp(const ProviderScope(child: PlanetDiaryApp()));
+  } catch (e) {
+    debugPrint('FATAL ERROR DURING INIT: $e');
+  }
 }
 
 class PlanetDiaryApp extends StatelessWidget {

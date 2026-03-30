@@ -13,14 +13,6 @@ import '../providers/trip_provider.dart';
 /// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화만으로 처리하고
 /// 아래 mock 맵은 제거하세요.
 
-const Map<int, _DayMeta> _mockDayMeta = {
-  12: _DayMeta(hasDiary: true, hasPhoto: false, questClear: false),
-  36: _DayMeta(hasDiary: true, hasPhoto: true, questClear: false),
-  85: _DayMeta(hasDiary: true, hasPhoto: true, questClear: true),
-  166: _DayMeta(hasDiary: false, hasPhoto: true, questClear: true),
-  238: _DayMeta(hasDiary: true, hasPhoto: false, questClear: true),
-};
-
 class _DayMeta {
   const _DayMeta({
     required this.hasDiary,
@@ -126,15 +118,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   _DayMeta _effectiveMeta(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null) {
-      final questsOk =
-          e.questDone.length >= 3 && e.questDone.every((bool x) => x);
+      // 노란색 = questDone 중 하나라도 true
+      final anyQuest = e.questDone.any((bool x) => x);
       return _DayMeta(
-        hasDiary: e.text.trim().isNotEmpty,
-        hasPhoto: e.photoPaths.isNotEmpty,
-        questClear: questsOk,
+        hasDiary: true, // 흰색 = 해당 tripDay에 DiaryEntry 존재
+        hasPhoto: e.photoPaths.isNotEmpty, // 파란색 = photoPaths 비어있지 않음
+        questClear: anyQuest,
       );
     }
-    return _mockDayMeta[tripDay] ?? _DayMeta.empty;
+    return _DayMeta.empty;
   }
 
   String _formatHudDate(DateTime d) {
@@ -157,16 +149,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     });
   }
 
-  /// TODO(Hive): diaryProvider만으로 통계 계산 (현재는 mock 보조 포함)
   ({int recorded, int questsCleared}) _stats(
     Map<int, DiaryEntry> diaryMap,
   ) {
     var recorded = 0;
     var questsCleared = 0;
-    for (var tripDay = 1; tripDay <= 365; tripDay++) {
-      final m = _effectiveMeta(tripDay, diaryMap);
-      if (m.hasDiary) recorded++;
-      if (m.questClear) questsCleared++;
+    for (final entry in diaryMap.values) {
+      recorded++;
+      if (entry.questDone.any((x) => x)) questsCleared++;
     }
     return (recorded: recorded, questsCleared: questsCleared);
   }
@@ -174,11 +164,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String? _previewText(int tripDay, Map<int, DiaryEntry> diaryMap) {
     final e = diaryMap[tripDay];
     if (e != null && e.text.trim().isNotEmpty) {
-      final line = e.text.trim().split(RegExp(r'\s+')).take(12).join(' ');
-      return line.length > 80 ? '${line.substring(0, 80)}…' : line;
-    }
-    if (_mockDayMeta[tripDay]?.hasDiary == true) {
-      return '오늘은 모의 데이터로 표시되는 미리보기 텍스트입니다.';
+      // 선택한 날짜의 DiaryEntry 있으면 text 첫 줄 표시
+      final firstLine = e.text.trim().split('\n').first;
+      return firstLine.length > 80 ? '${firstLine.substring(0, 80)}…' : firstLine;
     }
     return null;
   }
@@ -193,6 +181,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       final safe = _safeFocusedDayFromToday();
       _focusedDay = safe;
       _selectedDay = safe;
+    }
+
+    // 데이터 로딩 체크 (비어있을 때 빈 화면 대신 로딩 표시)
+    if (diaryMap.isEmpty && trip.tripDay == 0) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF020408),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 1.0,
+          ),
+        ),
+      );
     }
 
     final stats = _stats(diaryMap);
@@ -215,38 +216,43 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               painter: _CalendarStarfieldPainter(_starSamples),
             ),
           ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHud(trip),
-                  const SizedBox(height: 20),
-                  _buildPlanetStrip(trip),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _panelBg,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        width: 1,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildHud(trip),
+                      const SizedBox(height: 20),
+                      _buildPlanetStrip(trip),
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _panelBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+                        child: _buildCalendar(
+                          trip: trip,
+                          diaryMap: diaryMap,
+                          headerTextStyle: headerTextStyle,
+                          dowStyle: dowStyle,
+                        ),
                       ),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
-                    child: _buildCalendar(
-                      trip: trip,
-                      diaryMap: diaryMap,
-                      headerTextStyle: headerTextStyle,
-                      dowStyle: dowStyle,
-                    ),
+                      const SizedBox(height: 8),
+                      _buildSelectionPreview(trip, diaryMap),
+                      const SizedBox(height: 20),
+                      _buildStatsRow(trip, stats),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildSelectionPreview(trip, diaryMap),
-                  const SizedBox(height: 20),
-                  _buildStatsRow(trip, stats),
-                ],
+                ),
               ),
             ),
           ),

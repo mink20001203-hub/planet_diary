@@ -62,7 +62,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   int _moodIndex = 0;
   final List<String> _photoPaths = [];
   final ImagePicker _picker = ImagePicker();
-  bool _loaded = false;
+  bool _hydrated = false;
 
   DateTime get _dateForTrip =>
       _tripStart.add(Duration(days: widget.tripDay - 1));
@@ -78,6 +78,11 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
     super.initState();
     _textController = TextEditingController();
     _textController.addListener(() => setState(() {}));
+    
+    // initState에서 데이터 초기화
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hydrateFromDiary();
+    });
   }
 
   @override
@@ -87,9 +92,8 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
   }
 
   void _hydrateFromDiary() {
-    if (_loaded) return;
-    _loaded = true;
-    final entry = ref.read(diaryProvider)[widget.tripDay];
+    final diaryMap = ref.read(diaryProvider);
+    final entry = diaryMap[widget.tripDay];
     if (entry != null) {
       _textController.text = entry.text;
       _moodIndex = entry.moodIndex.clamp(0, _moods.length - 1);
@@ -98,6 +102,9 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
         ..addAll(entry.photoPaths);
       ref.read(questProvider.notifier).setForDay(widget.tripDay, entry.questDone);
     }
+    setState(() {
+      _hydrated = true;
+    });
   }
 
   Future<void> _saveToHive({required bool popAfter}) async {
@@ -110,19 +117,37 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
       questDone: List<bool>.from(quests),
       savedAt: DateTime.now(),
     );
+    
     final messenger = ScaffoldMessenger.of(context);
     await ref.read(diaryProvider.notifier).save(entry);
+    
     if (!mounted) return;
     if (popAfter) {
       context.pop();
       messenger.showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF1a1a1a),
+          behavior: SnackBarBehavior.floating,
           content: Text(
             'DAY ${widget.tripDay} 기록 완료',
             style: GoogleFonts.spaceMono(
               color: const Color(0xFFFFD246),
               fontSize: 13,
+            ),
+          ),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 1),
+          backgroundColor: const Color(0xFF1a1a1a),
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            '임시 저장되었습니다.',
+            style: GoogleFonts.spaceMono(
+              color: Colors.white70,
+              fontSize: 12,
             ),
           ),
         ),
@@ -147,7 +172,18 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _hydrateFromDiary();
+    if (!_hydrated) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF020408),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 1.0,
+          ),
+        ),
+      );
+    }
+
     final planet = planetForDay(widget.tripDay);
     final stayDay = widget.tripDay - planet.startDay + 1;
     final remain = planet.days - stayDay;
@@ -168,164 +204,169 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen> {
               painter: _DiaryStarfieldPainter(_starSamples),
             ),
           ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _topBar(),
-                  const SizedBox(height: 16),
-                  _planetBanner(planet, stayDay, remain),
-                  const SizedBox(height: 22),
-                  _moodSection(),
-                  const SizedBox(height: 20),
-                  Stack(
-                children: [
-                  TextField(
-                    controller: _textController,
-                    maxLength: 500,
-                    maxLines: null,
-                    minLines: 6,
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 14,
-                      height: 1.75,
-                      color: Colors.white.withValues(alpha: 0.92),
-                    ),
-                    cursorColor: const Color(0xFFFFD246),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      filled: true,
-                      fillColor: _panelBg,
-                      hintText: '${planet.name}에서의 오늘을 기록하세요...',
-                      hintStyle: GoogleFonts.spaceMono(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        height: 1.75,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _topBar(),
+                      const SizedBox(height: 16),
+                      _planetBanner(planet, stayDay, remain),
+                      const SizedBox(height: 22),
+                      _moodSection(),
+                      const SizedBox(height: 20),
+                      Stack(
+                        children: [
+                          TextField(
+                            controller: _textController,
+                            maxLength: 500,
+                            maxLines: null,
+                            minLines: 6,
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 14,
+                              height: 1.75,
+                              color: Colors.white.withValues(alpha: 0.92),
+                            ),
+                            cursorColor: const Color(0xFFFFD246),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              filled: true,
+                              fillColor: _panelBg,
+                              hintText: '${planet.name}에서의 오늘을 기록하세요...',
+                              hintStyle: GoogleFonts.spaceMono(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                height: 1.75,
+                              ),
+                              contentPadding: const EdgeInsets.all(14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: borderIdle),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: borderIdle),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: borderFocus, width: 1.2),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 10,
+                            bottom: 10,
+                            child: Text(
+                              '${_textController.text.characters.length} / 500',
+                              style: GoogleFonts.spaceMono(
+                                fontSize: 9,
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      contentPadding: const EdgeInsets.all(14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: borderIdle),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: borderIdle),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: borderFocus, width: 1.2),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 10,
-                    bottom: 10,
-                    child: Text(
-                      '${_textController.text.characters.length} / 500',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 9,
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-                  const SizedBox(height: 20),
-                  Text(
-                '사진 기록',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.25),
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 76,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    ...List.generate(_photoPaths.length, (i) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: _PhotoThumb(
-                          path: _photoPaths[i],
-                          onRemove: () => _removePhoto(i),
-                        ),
-                      );
-                    }),
-                    _addPhotoButton(),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                '오늘의 퀘스트',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.25),
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 12),
-                  _questCard(
-                planet: planet,
-                doneCount: doneCount,
-                quests: quests,
-                defs: questDefs,
-              ),
-                  const SizedBox(height: 28),
-                  Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _saveToHive(popAfter: false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                        backgroundColor: _panelBg,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        '임시저장',
+                      const SizedBox(height: 20),
+                      Text(
+                        '사진 기록',
                         style: GoogleFonts.spaceMono(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 9,
+                          color: Colors.white.withValues(alpha: 0.25),
+                          letterSpacing: 2,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _saveToHive(popAfter: true),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(
-                          color: planet.color.withValues(alpha: 0.5),
-                        ),
-                        backgroundColor: planet.color.withValues(alpha: 0.2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 76,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            ...List.generate(_photoPaths.length, (i) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _PhotoThumb(
+                                  path: _photoPaths[i],
+                                  onRemove: () => _removePhoto(i),
+                                ),
+                              );
+                            }),
+                            _addPhotoButton(),
+                          ],
                         ),
                       ),
-                      child: Text(
-                        '기록 완료 →',
+                      const SizedBox(height: 24),
+                      Text(
+                        '오늘의 퀘스트',
                         style: GoogleFonts.spaceMono(
-                          fontSize: 12,
-                          color: planet.color.withValues(alpha: 0.95),
-                          fontWeight: FontWeight.w600,
+                          fontSize: 9,
+                          color: Colors.white.withValues(alpha: 0.25),
+                          letterSpacing: 2,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      _questCard(
+                        planet: planet,
+                        doneCount: doneCount,
+                        quests: quests,
+                        defs: questDefs,
+                      ),
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _saveToHive(popAfter: false),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                                backgroundColor: _panelBg,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                '임시저장',
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _saveToHive(popAfter: true),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: BorderSide(
+                                  color: planet.color.withValues(alpha: 0.5),
+                                ),
+                                backgroundColor: planet.color.withValues(alpha: 0.2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                '기록 완료 →',
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 12,
+                                  color: planet.color.withValues(alpha: 0.95),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-                ],
+                ),
               ),
             ),
           ),
