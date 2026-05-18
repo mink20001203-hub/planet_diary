@@ -285,6 +285,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      _buildMonthlyRecapButton(_focusedDay),
+                      const SizedBox(height: 12),
                       _buildSelectionPreview(trip, diaryMap),
                       const SizedBox(height: 20),
                       _buildStatsRow(trip, stats),
@@ -876,6 +878,55 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         style: GoogleFonts.spaceMono(
           fontSize: 9,
           color: done ? amber.withOpacity(0.95) : Colors.white.withOpacity(0.25),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthlyRecapButton(DateTime focusedDay) {
+    final monthText = '${focusedDay.year} ${_monthAbbr[focusedDay.month - 1]}';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(
+          '/monthly-recap/${focusedDay.year}/${focusedDay.month}',
+        ),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFD246).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFFFD246).withOpacity(0.22),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.insights_outlined,
+                color: Color(0xFFFFD246),
+                size: 17,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '$monthText MONTHLY RECAP',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 11,
+                    color: const Color(0xFFFFD246).withOpacity(0.82),
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: Colors.white.withOpacity(0.35),
+                size: 18,
+              ),
+            ],
+          ),
         ),
       ),
     );

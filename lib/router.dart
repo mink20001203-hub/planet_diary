@@ -4,6 +4,7 @@ import 'screens/space_map_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/diary_edit_screen.dart';
 
+import 'screens/monthly_recap_screen.dart';
 import 'screens/recap_screen.dart';
 import 'screens/settings_screen.dart';
 
@@ -33,6 +34,18 @@ final appRouter = GoRouter(
         child: const RecapScreen(),
         transitionsBuilder: _fadeTransition,
       ),
+    ),
+    GoRoute(
+      path: '/monthly-recap/:year/:month',
+      pageBuilder: (context, state) {
+        final year = int.parse(state.pathParameters['year']!);
+        final month = int.parse(state.pathParameters['month']!);
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: MonthlyRecapScreen(year: year, month: month),
+          transitionsBuilder: _fadeTransition,
+        );
+      },
     ),
     GoRoute(
       path: '/settings',
