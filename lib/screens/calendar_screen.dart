@@ -7,9 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/diary_entry.dart';
+import '../providers/achievement_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
 import '../providers/xp_provider.dart';
+import '../widgets/achievement_badge_strip.dart';
 
 /// TODO(Hive): 일기/사진/퀘스트 집계를 diaryProvider + Hive 동기화 기반으로 정리
 /// 아래 mock 문구는 제거 필요
@@ -290,6 +292,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       _buildSelectionPreview(trip, diaryMap),
                       const SizedBox(height: 20),
                       _buildStatsRow(trip, stats),
+                      const SizedBox(height: 12),
+                      AchievementBadgeStrip(
+                        achievements: ref.watch(achievementProvider),
+                        compact: true,
+                      ),
                     ],
                   ),
                 ),

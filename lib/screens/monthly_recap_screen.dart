@@ -9,8 +9,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/diary_entry.dart';
+import '../providers/achievement_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
+import '../widgets/achievement_badge_strip.dart';
 
 class MonthlyRecapScreen extends ConsumerStatefulWidget {
   const MonthlyRecapScreen({
@@ -129,6 +131,11 @@ class _MonthlyRecapScreenState extends ConsumerState<MonthlyRecapScreen>
                         _header(monthLabel, stats),
                         const SizedBox(height: 24),
                         _statGrid(stats),
+                        const SizedBox(height: 24),
+                        AchievementBadgeStrip(
+                          achievements: ref.watch(achievementProvider),
+                          compact: true,
+                        ),
                         const SizedBox(height: 24),
                         _moodSection(stats.moodCounts),
                         const SizedBox(height: 24),

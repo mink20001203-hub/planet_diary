@@ -9,8 +9,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/diary_entry.dart';
+import '../providers/achievement_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/trip_provider.dart';
+import '../widgets/achievement_badge_strip.dart';
 
 class RecapScreen extends ConsumerStatefulWidget {
   const RecapScreen({super.key});
@@ -99,6 +101,10 @@ class _RecapScreenState extends ConsumerState<RecapScreen>
                 _buildMoodDistribution(diaryMap),
                 const SizedBox(height: 40),
                 _buildQuestStats(diaryMap),
+                const SizedBox(height: 40),
+                AchievementBadgeStrip(
+                  achievements: ref.watch(achievementProvider),
+                ),
                 const SizedBox(height: 40),
                 _buildMoments(diaryMap),
                 const SizedBox(height: 60),
