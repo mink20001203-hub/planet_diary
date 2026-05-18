@@ -31,4 +31,31 @@ class DiaryEntry extends HiveObject {
   })  : photoPaths = photoPaths ?? [],
         questDone = questDone ?? [false, false, false],
         savedAt = savedAt ?? DateTime.now();
+
+  Map<String, dynamic> toBackupJson() {
+    return {
+      'tripDay': tripDay,
+      'text': text,
+      'moodIndex': moodIndex,
+      'photoPaths': photoPaths,
+      'questDone': questDone,
+      'savedAt': savedAt.toIso8601String(),
+    };
+  }
+
+  factory DiaryEntry.fromBackupJson(Map<String, dynamic> json) {
+    return DiaryEntry(
+      tripDay: json['tripDay'] as int,
+      text: json['text'] as String? ?? '',
+      moodIndex: json['moodIndex'] as int? ?? 0,
+      photoPaths: (json['photoPaths'] as List<dynamic>? ?? [])
+          .map((path) => path.toString())
+          .toList(),
+      questDone: (json['questDone'] as List<dynamic>? ?? [])
+          .map((done) => done == true)
+          .toList(),
+      savedAt: DateTime.tryParse(json['savedAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
 }

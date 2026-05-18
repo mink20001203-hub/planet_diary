@@ -27,5 +27,16 @@ class DiaryNotifier extends StateNotifier<Map<int, DiaryEntry>> {
     state = {...state, entry.tripDay: entry};
   }
 
+  Future<void> replaceAll(List<DiaryEntry> entries) async {
+    final box = Hive.box<DiaryEntry>('diary');
+    final nextState = <int, DiaryEntry>{};
+    await box.clear();
+    for (final entry in entries) {
+      await box.put(entry.tripDay, entry);
+      nextState[entry.tripDay] = entry;
+    }
+    state = nextState;
+  }
+
   DiaryEntry? get(int tripDay) => state[tripDay];
 }
