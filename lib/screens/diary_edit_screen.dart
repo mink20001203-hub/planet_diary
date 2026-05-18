@@ -75,6 +75,7 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
   final ImagePicker _picker = ImagePicker();
   late final ScrollController _moodScrollController;
   bool _hydrated = false;
+  bool _isEditing = false;
 
   String _dateHeaderLine(DateTime date) {
     final d = date;
@@ -127,11 +128,13 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
         ..clear()
         ..addAll(entry.photoPaths);
       ref.read(questProvider.notifier).setForDay(widget.tripDay, entry.questDone);
+      _isEditing = false;
     } else {
       // ?좉퇋 ?쇨린硫??섏뒪???곹깭 珥덇린??
       ref
           .read(questProvider.notifier)
           .setForDay(widget.tripDay, [false, false, false]);
+      _isEditing = true;
     }
     setState(() {
       _hydrated = true;
@@ -323,10 +326,22 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
     final planet = planetForDay(widget.tripDay);
     final stayDay = widget.tripDay - planet.startDay + 1;
     final remain = planet.days - stayDay;
+    final entry = ref.watch(diaryProvider)[widget.tripDay];
     final quests = ref.watch(questProvider)[widget.tripDay] ??
         [false, false, false];
     final questDefs = _questsForPlanet(planet.name);
     final doneCount = quests.where((e) => e).length;
+
+    if (entry != null && !_isEditing) {
+      return _readOnlyScaffold(
+        dateHeaderLine: _dateHeaderLine(dateForTrip),
+        planet: planet,
+        stayDay: stayDay,
+        remain: remain,
+        entry: entry,
+        questDefs: questDefs,
+      );
+    }
 
     final borderIdle = Colors.white.withOpacity(0.15);
     final borderFocus = Colors.white.withOpacity(0.3);
@@ -553,6 +568,319 @@ class _DiaryEditScreenState extends ConsumerState<DiaryEditScreen>
                   ),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readOnlyScaffold({
+    required String dateHeaderLine,
+    required PlanetInfo planet,
+    required int stayDay,
+    required int remain,
+    required DiaryEntry entry,
+    required List<({String title, int xp})> questDefs,
+  }) {
+    final mood = _moods[entry.moodIndex.clamp(0, _moods.length - 1)];
+    final doneCount = entry.questDone.where((done) => done).length;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF020408),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _DiaryStarfieldPainter(_starSamples),
+            ),
+          ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _readOnlyTopBar(dateHeaderLine),
+                      const SizedBox(height: 16),
+                      _planetBanner(planet, stayDay, remain),
+                      const SizedBox(height: 20),
+                      _readOnlyMood(mood),
+                      const SizedBox(height: 16),
+                      _readOnlyText(entry.text),
+                      const SizedBox(height: 20),
+                      _readOnlyPhotos(entry.photoPaths),
+                      const SizedBox(height: 24),
+                      _readOnlyQuestCard(
+                        planet: planet,
+                        doneCount: doneCount,
+                        quests: entry.questDone,
+                        defs: questDefs,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readOnlyTopBar(String dateHeaderLine) {
+    return Row(
+      children: [
+        InkWell(
+          onTap: () => context.pop(),
+          child: Text(
+            '← CALENDAR',
+            style: GoogleFonts.spaceMono(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.35),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            children: [
+              Text(
+                dateHeaderLine,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 11,
+                  color: const Color(0xFFFFD246).withOpacity(0.6),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'DAY ${widget.tripDay}',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 18,
+                  color: Colors.white.withOpacity(0.9),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        InkWell(
+          onTap: () => setState(() => _isEditing = true),
+          child: Text(
+            'EDIT',
+            style: GoogleFonts.spaceMono(
+              fontSize: 11,
+              color: const Color(0xFFFFD246).withOpacity(0.75),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _readOnlyMood(({String emoji, String label}) mood) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      decoration: BoxDecoration(
+        color: _moodCardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '오늘의 감정',
+            style: GoogleFonts.spaceMono(
+              fontSize: 9,
+              color: Colors.white.withOpacity(0.25),
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Text(
+              '${mood.emoji}${mood.label}',
+              style: GoogleFonts.spaceMono(
+                fontSize: 11,
+                color: Colors.white.withOpacity(0.86),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readOnlyText(String text) {
+    final body = text.trim().isEmpty ? '기록된 내용이 없어요.' : text.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _panelBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Text(
+        body,
+        style: GoogleFonts.notoSansKr(
+          fontSize: 14,
+          height: 1.7,
+          color: text.trim().isEmpty
+              ? Colors.white.withOpacity(0.28)
+              : Colors.white.withOpacity(0.9),
+          fontStyle: text.trim().isEmpty ? FontStyle.italic : FontStyle.normal,
+        ),
+      ),
+    );
+  }
+
+  Widget _readOnlyPhotos(List<String> photoPaths) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '사진 기록',
+          style: GoogleFonts.spaceMono(
+            fontSize: 9,
+            color: Colors.white.withOpacity(0.3),
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (photoPaths.isEmpty)
+          Text(
+            '저장된 사진이 없어요.',
+            style: GoogleFonts.notoSansKr(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.3),
+            ),
+          )
+        else
+          SizedBox(
+            height: 76,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: photoPaths.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                return _ReadOnlyPhotoThumb(
+                  path: photoPaths[index],
+                  loadBytes: _readPhotoBytes,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _readOnlyQuestCard({
+    required PlanetInfo planet,
+    required int doneCount,
+    required List<bool> quests,
+    required List<({String title, int xp})> defs,
+  }) {
+    final pc = planet.color;
+    return Container(
+      decoration: BoxDecoration(
+        color: _panelBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: pc.withOpacity(0.2))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${planet.en.toUpperCase()} MISSION',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 11,
+                    color: const Color(0xFFFFD246).withOpacity(0.85),
+                    letterSpacing: 1,
+                  ),
+                ),
+                Text(
+                  '$doneCount/3 완료',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+            child: Column(
+              children: List.generate(3, (index) {
+                final done = index < quests.length && quests[index];
+                final quest = defs[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: done ? pc.withOpacity(0.08) : null,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Icon(
+                            done ? Icons.check_box : Icons.check_box_outline_blank,
+                            size: 18,
+                            color: done
+                                ? pc.withOpacity(0.95)
+                                : Colors.white.withOpacity(0.24),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            quest.title,
+                            style: GoogleFonts.notoSansKr(
+                              fontSize: 11,
+                              height: 1.35,
+                              color: Colors.white.withOpacity(
+                                done ? 0.42 : 0.82,
+                              ),
+                              decoration:
+                                  done ? TextDecoration.lineThrough : null,
+                              decorationColor: Colors.white.withOpacity(0.35),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ],
@@ -1013,6 +1341,56 @@ class _PhotoThumb extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ReadOnlyPhotoThumb extends StatelessWidget {
+  const _ReadOnlyPhotoThumb({
+    required this.path,
+    required this.loadBytes,
+  });
+
+  final String path;
+  final Future<Uint8List> Function(String path) loadBytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0E1420),
+          border: Border.all(color: Colors.white.withOpacity(0.15)),
+        ),
+        child: kIsWeb
+            ? Image.network(
+                path,
+                fit: BoxFit.cover,
+                width: 72,
+                height: 72,
+                errorBuilder: (_, __, ___) =>
+                    const ColoredBox(color: Color(0xFF1a1a1a)),
+              )
+            : FutureBuilder<Uint8List>(
+                future: loadBytes(path),
+                builder: (context, snap) {
+                  if (snap.hasError || !snap.hasData) {
+                    return const ColoredBox(color: Color(0xFF1a1a1a));
+                  }
+                  return Image.memory(
+                    snap.data!,
+                    fit: BoxFit.cover,
+                    width: 72,
+                    height: 72,
+                    gaplessPlayback: true,
+                    filterQuality: FilterQuality.low,
+                  );
+                },
+              ),
+      ),
     );
   }
 }
